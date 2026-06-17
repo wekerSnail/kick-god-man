@@ -119,13 +119,13 @@ export class Enemy {
     const armMaterial = new THREE.MeshStandardMaterial({ color: 0xFF6B6B })
 
     const armLeft = new THREE.Mesh(armGeometry, armMaterial)
-    armLeft.position.set(-0.4, 1.6, -0.15)
+    armLeft.position.set(-0.4, 1.3, -0.15)
     armLeft.rotation.x = Math.PI / 3
     armLeft.castShadow = true
     this.mesh.add(armLeft)
 
     const armRight = new THREE.Mesh(armGeometry, armMaterial)
-    armRight.position.set(0.4, 1.6, -0.15)
+    armRight.position.set(0.4, 1.3, -0.15)
     armRight.rotation.x = Math.PI / 3
     armRight.castShadow = true
     this.mesh.add(armRight)
