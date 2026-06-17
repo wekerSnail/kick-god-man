@@ -40,6 +40,7 @@
         >
           <span class="prop-icon">{{ item.icon }}</span>
           <span class="prop-name">{{ item.name }}</span>
+          <span v-if="item.count > 1" class="prop-count">x{{ item.count }}</span>
           <span v-if="item.category === 'weapon'" class="weapon-badge">武器</span>
           <span class="prop-key">{{ index + 1 }}</span>
         </div>
@@ -617,6 +618,21 @@ const handleResize = () => {
 .inventory-slot.weapon {
   border-color: #ff9800;
   background: linear-gradient(145deg, #fff3e0 0%, #ffe0b2 100%);
+}
+
+.prop-count {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-size: 10px;
+  color: #fff;
+  font-weight: bold;
+  background: #f44336;
+  border-radius: 8px;
+  padding: 0 5px;
+  min-width: 16px;
+  text-align: center;
+  line-height: 16px;
 }
 
 .weapon-badge {

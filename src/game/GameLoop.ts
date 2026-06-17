@@ -30,7 +30,7 @@ export class GameLoop {
   private isGameOver: boolean = false
   private isWin: boolean = false
   private score: number = 0
-  private inventory: { id: string; type: string; name: string; icon: string; description: string; duration: number; active: boolean; startTime?: number; category?: string }[] = []
+  private inventory: { id: string; type: string; name: string; icon: string; description: string; duration: number; active: boolean; startTime?: number; category?: string; count: number }[] = []
   private onStateChange: (state: any) => void
   private kickCounted: boolean = false
   private particles: THREE.Points[] = []
@@ -66,10 +66,11 @@ export class GameLoop {
       type: 'mace',
       name: '狼牙棒',
       icon: '🏏',
-      description: '击中造成眩晕3秒',
+      description: '击中算5次，造成眩晕3秒',
       duration: 0,
       active: false,
-      category: 'weapon'
+      category: 'weapon',
+      count: 1
     })
   }
 
@@ -238,17 +239,23 @@ export class GameLoop {
 
   private addProp(prop: any) {
     const isWeapon = prop.category === 'weapon'
-    const config = {
-      id: prop.id,
-      type: prop.type,
-      name: this.getPropName(prop.type),
-      icon: this.getPropIcon(prop.type),
-      description: this.getPropDescription(prop.type),
-      duration: prop.duration,
-      active: false,
-      category: isWeapon ? 'weapon' as const : 'consumable' as const
+    const existing = this.inventory.find(item => item.type === prop.type && !item.active)
+    if (existing) {
+      existing.count++
+    } else {
+      const config = {
+        id: prop.id,
+        type: prop.type,
+        name: this.getPropName(prop.type),
+        icon: this.getPropIcon(prop.type),
+        description: this.getPropDescription(prop.type),
+        duration: prop.duration,
+        active: false,
+        category: isWeapon ? 'weapon' as const : 'consumable' as const,
+        count: 1
+      }
+      this.inventory.push(config)
     }
-    this.inventory.push(config)
   }
 
   private getPropName(type: string): string {
@@ -303,13 +310,20 @@ export class GameLoop {
         const weaponConfig = WEAPON_CONFIGS.find(w => w.type === prop.type)
         if (weaponConfig) {
           this.player.equipWeapon(weaponConfig)
-          this.inventory.splice(index, 1)
+          prop.count--
+          if (prop.count <= 0) {
+            this.inventory.splice(index, 1)
+          }
         }
       } else if (!prop.active) {
         prop.active = true
         prop.startTime = Date.now()
+        prop.count--
         if (prop.type === 'combo') {
           this.player.setComboActive(true)
+        }
+        if (prop.count <= 0) {
+          this.inventory.splice(index, 1)
         }
       }
     }

@@ -33,6 +33,7 @@ export interface InventorySlot {
   active: boolean
   category?: 'consumable' | 'weapon'
   startTime?: number
+  count: number
 }
 
 export interface Prop {
@@ -111,9 +112,9 @@ export const WEAPON_CONFIGS: WeaponConfig[] = [
     type: 'mace',
     name: '狼牙棒',
     icon: '🏏',
-    description: '击中造成眩晕3秒',
+    description: '击中算5次，造成眩晕3秒',
     category: 'weapon',
-    damage: 1,
+    damage: 5,
     stunDuration: 3,
     swingDuration: 0.4,
     swingRange: 2.5,
@@ -124,9 +125,9 @@ export const WEAPON_CONFIGS: WeaponConfig[] = [
     type: 'bat',
     name: '棒球棒',
     icon: '⚾',
-    description: '击中造成眩晕2秒',
+    description: '击中算3次，造成眩晕2秒',
     category: 'weapon',
-    damage: 1,
+    damage: 3,
     stunDuration: 2,
     swingDuration: 0.35,
     swingRange: 2.8,
