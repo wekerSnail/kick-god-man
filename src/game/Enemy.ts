@@ -30,6 +30,9 @@ export class Enemy {
   private meetingShield: THREE.Mesh
   private meetingTextSprite: THREE.Sprite
   private meetingArmWave: number = 0
+  private armLeft: THREE.Mesh
+  private armRight: THREE.Mesh
+  private nextMeetingTime: number = 25
 
   constructor(scene: THREE.Scene) {
     this.position = new THREE.Vector3(0, 0, -10)
@@ -118,17 +121,17 @@ export class Enemy {
     const armGeometry = new THREE.CylinderGeometry(0.08, 0.08, 0.6, 8)
     const armMaterial = new THREE.MeshStandardMaterial({ color: 0xFF6B6B })
 
-    const armLeft = new THREE.Mesh(armGeometry, armMaterial)
-    armLeft.position.set(-0.4, 1.3, -0.15)
-    armLeft.rotation.x = Math.PI / 3
-    armLeft.castShadow = true
-    this.mesh.add(armLeft)
+    this.armLeft = new THREE.Mesh(armGeometry, armMaterial)
+    this.armLeft.position.set(-0.4, 1.3, -0.15)
+    this.armLeft.rotation.x = Math.PI / 3
+    this.armLeft.castShadow = true
+    this.mesh.add(this.armLeft)
 
-    const armRight = new THREE.Mesh(armGeometry, armMaterial)
-    armRight.position.set(0.4, 1.3, -0.15)
-    armRight.rotation.x = Math.PI / 3
-    armRight.castShadow = true
-    this.mesh.add(armRight)
+    this.armRight = new THREE.Mesh(armGeometry, armMaterial)
+    this.armRight.position.set(0.4, 1.3, -0.15)
+    this.armRight.rotation.x = Math.PI / 3
+    this.armRight.castShadow = true
+    this.mesh.add(this.armRight)
   }
 
   private createChair() {
@@ -386,6 +389,15 @@ export class Enemy {
       const maxFlash = Math.max(3, 5 - difficulty * 0.3)
       this.phoneFlashTimer = minFlash + Math.random() * (maxFlash - minFlash)
     }
+
+    this.nextMeetingTime -= delta
+    if (this.nextMeetingTime <= 0) {
+      const chance = 0.3 + (this.getDifficulty() - 1) * 0.1
+      if (Math.random() < chance) {
+        this.startMeeting(6)
+      }
+      this.nextMeetingTime = 20 + Math.random() * 15
+    }
   }
 
   private updatePhoneFlashing(delta: number) {
@@ -584,12 +596,18 @@ export class Enemy {
     this.body.rotation.x = Math.sin(this.meetingTimer * 4) * 0.05
     this.body.rotation.z = Math.sin(this.meetingTimer * 3) * 0.03
     this.meetingArmWave += delta * 5
+    this.armRight.rotation.x = -Math.PI / 3 + Math.sin(this.meetingArmWave) * 0.3
+    this.armRight.rotation.z = Math.sin(this.meetingArmWave * 0.7) * 0.15
+    this.armLeft.rotation.x = Math.PI / 3 + Math.sin(this.meetingArmWave * 0.8) * 0.15
     if (this.meetingTimer <= 0) {
       this.isMeeting = false
       this.meetingShield.visible = false
       this.meetingTextSprite.visible = false
       this.body.rotation.x = 0
       this.body.rotation.z = 0
+      this.armRight.rotation.x = Math.PI / 3
+      this.armRight.rotation.z = 0
+      this.armLeft.rotation.x = Math.PI / 3
       this.state = 'normal'
       this.scheduleNextLookBack()
     }

@@ -20,6 +20,8 @@
 
     <div ref="gameContainer" class="game-canvas-container"></div>
 
+    <div v-if="gameState.enemyState === 'meeting'" class="meeting-warning-border"></div>
+
     <div class="inventory">
       <div class="inventory-label">道具栏 (按 1/2/3 使用) | {{ gameState.equippedWeapon ? '装备中: ' + gameState.equippedWeapon.name + ' (点击挥砍)' : '鼠标左键踹击' }}</div>
       <div class="inventory-items">
@@ -549,6 +551,20 @@ const handleResize = () => {
 @keyframes meetingPulse {
   0%, 100% { opacity: 1; text-shadow: 0 0 8px rgba(255, 68, 68, 0.6); }
   50% { opacity: 0.7; text-shadow: 0 0 16px rgba(255, 68, 68, 0.9); }
+}
+
+.meeting-warning-border {
+  position: absolute;
+  inset: 0;
+  border: 4px solid rgba(255, 68, 68, 0.6);
+  pointer-events: none;
+  z-index: 40;
+  animation: borderPulse 1s infinite;
+}
+
+@keyframes borderPulse {
+  0%, 100% { border-color: rgba(255, 68, 68, 0.6); box-shadow: inset 0 0 30px rgba(255, 68, 68, 0.15); }
+  50% { border-color: rgba(255, 68, 68, 0.2); box-shadow: inset 0 0 60px rgba(255, 68, 68, 0.08); }
 }
 
 .inventory-slot.weapon {
