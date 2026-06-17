@@ -95,8 +95,8 @@ export class Props {
       case 'noise':
         color = 0xFFFF00
         break
-      case 'power':
-        color = 0xFF4500
+      case 'combo':
+        color = 0xFF6B00
         break
       default:
         color = 0xFFFFFF

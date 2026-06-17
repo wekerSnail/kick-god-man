@@ -3,7 +3,7 @@ import type { EventBus } from '../core/EventBus'
 export class LevelManager {
   private level: number = 1
   private kickTarget: number = 5
-  private kickTargets: number[] = [5, 10, 20, 35, 50, 70, 100]
+  private kickTargets: number[] = [10, 20, 35, 50, 70, 100, 150]
   private isTransitioning: boolean = false
   private transitionTimer: number = 0
   private readonly TRANSITION_DURATION: number = 2

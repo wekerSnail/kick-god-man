@@ -59,7 +59,8 @@
       </div>
       <div class="attack-status">
         <span class="attack-label">攻击:</span>
-        <span v-if="gameState.attackCooldown > 0" class="attack-cooldown">冷却中 ({{ Math.ceil(gameState.attackCooldown) }}s)</span>
+        <span v-if="gameState.comboActive" class="combo-active">🥊 连击中!</span>
+        <span v-else-if="gameState.attackCooldown > 0" class="attack-cooldown">冷却中 ({{ Math.ceil(gameState.attackCooldown) }}s)</span>
         <span v-else class="attack-ready">就绪</span>
       </div>
       <div class="enemy-status">
@@ -146,7 +147,8 @@ const gameState = ref({
   isLevelTransition: false,
   equippedWeapon: null as any,
   isChargingThrow: false,
-  attackCooldown: 0
+  attackCooldown: 0,
+  comboActive: false
 })
 
 const startGame = () => {
@@ -210,7 +212,8 @@ const restartGame = () => {
     isLevelTransition: false,
     equippedWeapon: null,
     isChargingThrow: false,
-    attackCooldown: 0
+    attackCooldown: 0,
+    comboActive: false
   }
   gameStarted.value = false
   setTimeout(() => {
@@ -536,6 +539,17 @@ const handleResize = () => {
 .attack-ready {
   color: #4caf50;
   font-weight: bold;
+}
+
+.combo-active {
+  color: #FF6B00;
+  font-weight: bold;
+  animation: comboPulse 0.3s infinite;
+}
+
+@keyframes comboPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.1); }
 }
 
 .enemy-normal {

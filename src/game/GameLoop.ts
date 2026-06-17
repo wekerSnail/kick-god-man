@@ -231,7 +231,8 @@ export class GameLoop {
       levelTransitionTimer: this.levelManager.getTransitionTimer(),
       equippedWeapon: this.player.getEquippedWeapon(),
       isChargingThrow: this.player.isCharging(),
-      attackCooldown: this.player.getAttackCooldown()
+      attackCooldown: this.player.getAttackCooldown(),
+      comboActive: this.player.isComboActive()
     })
   }
 
@@ -255,7 +256,7 @@ export class GameLoop {
       speed: '加速鞋',
       invisible: '隐身药水',
       noise: '噪音器',
-      power: '力量手套'
+      combo: '连击手套'
     }
     return names[type] || '未知道具'
   }
@@ -265,7 +266,7 @@ export class GameLoop {
       speed: '👟',
       invisible: '🧪',
       noise: '📢',
-      power: '🧤'
+      combo: '🥊'
     }
     return icons[type] || '❓'
   }
@@ -275,7 +276,7 @@ export class GameLoop {
       speed: '移动速度x2',
       invisible: '不被发现',
       noise: '吸引神人注意力',
-      power: '踹击计数+2'
+      combo: '5秒内连续攻击无冷却'
     }
     return descriptions[type] || '未知效果'
   }
@@ -285,6 +286,9 @@ export class GameLoop {
       if (item.active && item.startTime) {
         const elapsed = Date.now() - item.startTime
         if (elapsed >= item.duration) {
+          if (item.type === 'combo') {
+            this.player.setComboActive(false)
+          }
           return false
         }
       }
@@ -304,6 +308,9 @@ export class GameLoop {
       } else if (!prop.active) {
         prop.active = true
         prop.startTime = Date.now()
+        if (prop.type === 'combo') {
+          this.player.setComboActive(true)
+        }
       }
     }
   }

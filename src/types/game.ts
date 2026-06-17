@@ -20,6 +20,7 @@ export interface UIState {
   equippedWeapon: WeaponConfig | null
   isChargingThrow: boolean
   attackCooldown: number
+  comboActive: boolean
 }
 
 export interface InventorySlot {
@@ -46,7 +47,7 @@ export interface Prop {
   startTime?: number
 }
 
-export type PropType = 'speed' | 'invisible' | 'noise' | 'power' | 'mace' | 'bat' | 'frying_pan' | 'ruler'
+export type PropType = 'speed' | 'invisible' | 'noise' | 'combo' | 'mace' | 'bat' | 'frying_pan' | 'ruler'
 
 export interface PropConfig {
   type: PropType
@@ -95,10 +96,10 @@ export const PROP_CONFIGS: PropConfig[] = [
     category: 'consumable'
   },
   {
-    type: 'power',
-    name: '力量手套',
-    icon: '🧤',
-    description: '踹击计数+2',
+    type: 'combo',
+    name: '连击手套',
+    icon: '🥊',
+    description: '5秒内连续攻击无冷却',
     duration: 5000,
     spawnChance: 0.15,
     category: 'consumable'

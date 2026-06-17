@@ -13,6 +13,7 @@ export class Player {
   private potCooldown: number = 0
   private potActive: boolean = false
   private potStartTime: number = 0
+  private comboActive: boolean = false
   private input: InputManager
   private legLeft: THREE.Mesh
   private legRight: THREE.Mesh
@@ -261,12 +262,14 @@ export class Player {
   }
 
   kick() {
-    if (this.kickCooldown > 0 || this.isKicking || this.potActive) {
+    const noCooldown = this.comboActive
+    if (!noCooldown && (this.kickCooldown > 0 || this.isKicking || this.potActive)) {
       if (this.kickCooldown > 0) {
         this.showAttackCooldownHint()
       }
       return
     }
+    if (this.isKicking || this.potActive) return
     if (this.equippedWeapon) {
       this.swingWeapon()
       return
@@ -294,10 +297,10 @@ export class Player {
   }
 
   private swingWeapon(): void {
-    if (!this.equippedWeapon || this.swingCooldown > 0 || this.isSwingingWeapon) {
-      if (this.swingCooldown > 0) {
-        this.showAttackCooldownHint()
-      }
+    const noCooldown = this.comboActive
+    if (!this.equippedWeapon || this.isSwingingWeapon) return
+    if (!noCooldown && this.swingCooldown > 0) {
+      this.showAttackCooldownHint()
       return
     }
     this.isSwingingWeapon = true
@@ -551,6 +554,14 @@ export class Player {
 
   getAttackCooldown(): number {
     return Math.max(this.kickCooldown, this.swingCooldown)
+  }
+
+  setComboActive(active: boolean): void {
+    this.comboActive = active
+  }
+
+  isComboActive(): boolean {
+    return this.comboActive
   }
 
   getCameraPosition(): THREE.Vector3 {
