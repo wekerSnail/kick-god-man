@@ -395,7 +395,7 @@ export class Player {
   }
 
   getThrowDirection(): THREE.Vector3 {
-    const dir = new THREE.Vector3(0, 0, 1)
+    const dir = new THREE.Vector3(0, 0, -1)
     dir.applyQuaternion(this.mesh.quaternion)
     return dir.normalize()
   }

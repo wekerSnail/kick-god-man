@@ -22,8 +22,9 @@ export class ProjectileSystem {
 
   spawn(startPos: THREE.Vector3, direction: THREE.Vector3, power: number, weapon: WeaponConfig): void {
     const mesh = createWeaponMesh(weapon.type)
-    mesh.position.copy(startPos)
-    mesh.position.y = 1.5
+    const spawnOffset = direction.clone().multiplyScalar(1.0)
+    spawnOffset.y = 1.5
+    mesh.position.copy(startPos).add(spawnOffset)
     this.scene.add(mesh)
 
     const speed = 8 + power * 12
