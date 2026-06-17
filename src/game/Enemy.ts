@@ -4,9 +4,7 @@ export class Enemy {
   private mesh: THREE.Group
   private position: THREE.Vector3
   private state: 'normal' | 'phone_flashing' | 'looking_back' = 'normal'
-  private lookBackTimer: number = 0
   private phoneFlashTimer: number = 0
-  private lookBackDuration: number = 2
   private nextLookBackTime: number = 8
   private phoneMesh: THREE.Mesh
   private phoneLight: THREE.PointLight
@@ -344,7 +342,7 @@ export class Enemy {
     }
   }
 
-  private updateLookingBack(delta: number, playerPosition: THREE.Vector3, playerIsKicking: boolean, playerPotActive: boolean) {
+  private updateLookingBack(delta: number, _playerPosition: THREE.Vector3, _playerIsKicking: boolean, _playerPotActive: boolean) {
     this.animationProgress += delta
     
     switch (this.animationState) {
@@ -394,11 +392,7 @@ export class Enemy {
     }
   }
 
-  private onPlayerCaught() {
-    console.log('Player caught!')
-  }
-
-  private animateCharacter(delta: number) {
+  private animateCharacter(_delta: number) {
     const sittingY = 0.8
     const standingY = 0.8
     const headOffset = 0.8

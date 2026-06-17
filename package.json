@@ -16,8 +16,6 @@
     "vue-tsc": "^2.0.0"
   },
   "dependencies": {
-    "cannon-es": "^0.20.0",
-    "pixi.js": "^8.19.0",
     "three": "^0.170.0",
     "vue": "^3.5.0"
   }

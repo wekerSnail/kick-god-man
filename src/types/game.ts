@@ -1,26 +1,5 @@
 import * as THREE from 'three'
 
-export interface GameState {
-  kickCount: number
-  health: number
-  maxHealth: number
-  isGameOver: boolean
-  isWin: boolean
-  isPaused: boolean
-  isKicking: boolean
-  isLookingBack: boolean
-  phoneFlashing: boolean
-  difficulty: number
-  inventory: Prop[]
-  comboCount: number
-  lastKickTime: number
-  score: number
-  isUsingPot: boolean
-  potCooldown: number
-  potActive: boolean
-  potStartTime: number
-}
-
 export interface Prop {
   id: string
   type: PropType
@@ -77,26 +56,6 @@ export const PROP_CONFIGS: PropConfig[] = [
     spawnChance: 0.25
   }
 ]
-
-export interface EnemyState {
-  state: 'normal' | 'phone_flashing' | 'looking_back'
-  lookBackTimer: number
-  phoneFlashTimer: number
-  lookBackDuration: number
-  nextLookBackTime: number
-}
-
-export interface PlayerState {
-  position: THREE.Vector3
-  rotation: THREE.Euler
-  speed: number
-  isKicking: boolean
-  kickCooldown: number
-  isUsingPot: boolean
-  potCooldown: number
-  potActive: boolean
-  potStartTime: number
-}
 
 export interface HidingSpot {
   id: string

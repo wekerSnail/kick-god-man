@@ -3,7 +3,6 @@ import * as THREE from 'three'
 export class Player {
   private mesh: THREE.Group
   private position: THREE.Vector3
-  private rotation: THREE.Euler
   private speed: number = 5
   private kickCooldown: number = 0
   private isKicking: boolean = false
@@ -26,7 +25,6 @@ export class Player {
 
   constructor(scene: THREE.Scene) {
     this.position = new THREE.Vector3(0, 0, 10)
-    this.rotation = new THREE.Euler(0, 0, 0)
     this.mesh = new THREE.Group()
     
     this.createCharacterModel()

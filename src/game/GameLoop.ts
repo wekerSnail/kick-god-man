@@ -200,7 +200,7 @@ export class GameLoop {
     return descriptions[type] || '未知效果'
   }
 
-  private updateInventory(delta: number) {
+  private updateInventory(_delta: number) {
     this.inventory = this.inventory.filter(item => {
       if (item.active && item.startTime) {
         const elapsed = Date.now() - item.startTime
