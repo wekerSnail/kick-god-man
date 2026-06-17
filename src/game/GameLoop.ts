@@ -250,6 +250,7 @@ export class GameLoop {
     this.isRunning = false
     document.removeEventListener('click', this.clickHandler)
     this.player.dispose()
+    this.enemy.dispose()
     this.sceneManager.dispose()
     this.props.dispose()
     this.hidingSpots.dispose()

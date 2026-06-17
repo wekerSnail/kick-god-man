@@ -171,6 +171,14 @@ export class HidingSpots {
 
   dispose() {
     this.spots.forEach(spot => {
+      spot.mesh.traverse(child => {
+        if (child instanceof THREE.Mesh) {
+          child.geometry?.dispose()
+          const mat = child.material
+          if (Array.isArray(mat)) mat.forEach(m => m.dispose())
+          else if (mat) mat.dispose()
+        }
+      })
       this.scene.remove(spot.mesh)
     })
     this.spots = []

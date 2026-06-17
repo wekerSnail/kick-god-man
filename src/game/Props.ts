@@ -142,6 +142,14 @@ export class Props {
 
   dispose() {
     this.props.forEach(prop => {
+      prop.mesh.traverse(child => {
+        if (child instanceof THREE.Mesh) {
+          child.geometry?.dispose()
+          const mat = child.material
+          if (Array.isArray(mat)) mat.forEach(m => m.dispose())
+          else if (mat) mat.dispose()
+        }
+      })
       this.scene.remove(prop.mesh)
     })
     this.props = []

@@ -485,4 +485,16 @@ export class Enemy {
   getPosition(): THREE.Vector3 {
     return this.position
   }
+
+  dispose(): void {
+    this.mesh.traverse(child => {
+      if (child instanceof THREE.Mesh) {
+        child.geometry?.dispose()
+        const mat = child.material
+        if (Array.isArray(mat)) mat.forEach(m => m.dispose())
+        else if (mat) mat.dispose()
+      }
+    })
+    this.mesh.parent?.remove(this.mesh)
+  }
 }
