@@ -42,17 +42,17 @@ export class Enemy {
   }
 
   private createCharacterModel() {
-    const bodyGeometry = new THREE.CylinderGeometry(0.22, 0.22, 0.6, 8)
+    const bodyGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1.2, 8)
     const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xFF6B6B })
     this.body = new THREE.Mesh(bodyGeometry, bodyMaterial)
-    this.body.position.y = 1.1
+    this.body.position.y = 1.2
     this.body.castShadow = true
     this.mesh.add(this.body)
 
-    const headGeometry = new THREE.SphereGeometry(0.2, 16, 16)
+    const headGeometry = new THREE.SphereGeometry(0.25, 16, 16)
     const headMaterial = new THREE.MeshStandardMaterial({ color: 0xFFD5B8 })
     this.head = new THREE.Mesh(headGeometry, headMaterial)
-    this.head.position.y = 1.6
+    this.head.position.y = 2.0
     this.head.castShadow = true
     this.mesh.add(this.head)
 
@@ -60,63 +60,63 @@ export class Enemy {
     const eyeMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 })
     
     const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial)
-    leftEye.position.set(-0.07, 0.04, -0.18)
+    leftEye.position.set(-0.08, 0.04, -0.22)
     this.head.add(leftEye)
 
     const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial)
-    rightEye.position.set(0.07, 0.04, -0.18)
+    rightEye.position.set(0.08, 0.04, -0.22)
     this.head.add(rightEye)
 
     const mouthGeometry = new THREE.TorusGeometry(0.04, 0.015, 8, 16, Math.PI)
     const mouthMaterial = new THREE.MeshStandardMaterial({ color: 0xE74C3C })
     const mouth = new THREE.Mesh(mouthGeometry, mouthMaterial)
-    mouth.position.set(0, -0.06, -0.18)
+    mouth.position.set(0, -0.08, -0.22)
     mouth.rotation.x = Math.PI / 4
     this.head.add(mouth)
 
-    const hairGeometry = new THREE.SphereGeometry(0.22, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2)
+    const hairGeometry = new THREE.SphereGeometry(0.27, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2)
     const hairMaterial = new THREE.MeshStandardMaterial({ color: 0x3D2314 })
     const hair = new THREE.Mesh(hairGeometry, hairMaterial)
     hair.position.y = 0.08
     this.head.add(hair)
 
-    const legGeometry = new THREE.CylinderGeometry(0.07, 0.07, 0.7, 8)
+    const legGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.8, 8)
     const legMaterial = new THREE.MeshStandardMaterial({ color: 0x2C5F8A })
 
     const legLeft = new THREE.Mesh(legGeometry, legMaterial)
-    legLeft.position.set(-0.1, -0.5, 0)
+    legLeft.position.set(-0.15, -0.6, 0)
     legLeft.castShadow = true
     this.body.add(legLeft)
 
     const legRight = new THREE.Mesh(legGeometry, legMaterial)
-    legRight.position.set(0.1, -0.5, 0)
+    legRight.position.set(0.15, -0.6, 0)
     legRight.castShadow = true
     this.body.add(legRight)
 
-    const shoeGeometry = new THREE.BoxGeometry(0.1, 0.06, 0.18)
+    const shoeGeometry = new THREE.BoxGeometry(0.15, 0.1, 0.25)
     const shoeMaterial = new THREE.MeshStandardMaterial({ color: 0x1A1A1A })
 
     const shoeLeft = new THREE.Mesh(shoeGeometry, shoeMaterial)
-    shoeLeft.position.set(0, -0.38, 0)
+    shoeLeft.position.set(0, -0.45, 0.05)
     shoeLeft.castShadow = true
     legLeft.add(shoeLeft)
 
     const shoeRight = new THREE.Mesh(shoeGeometry, shoeMaterial)
-    shoeRight.position.set(0, -0.38, 0)
+    shoeRight.position.set(0, -0.45, 0.05)
     shoeRight.castShadow = true
     legRight.add(shoeRight)
 
-    const armGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.45, 8)
+    const armGeometry = new THREE.CylinderGeometry(0.08, 0.08, 0.6, 8)
     const armMaterial = new THREE.MeshStandardMaterial({ color: 0xFF6B6B })
 
     const armLeft = new THREE.Mesh(armGeometry, armMaterial)
-    armLeft.position.set(-0.3, 1.1, -0.15)
+    armLeft.position.set(-0.4, 1.6, -0.15)
     armLeft.rotation.x = Math.PI / 3
     armLeft.castShadow = true
     this.mesh.add(armLeft)
 
     const armRight = new THREE.Mesh(armGeometry, armMaterial)
-    armRight.position.set(0.3, 1.1, -0.15)
+    armRight.position.set(0.4, 1.6, -0.15)
     armRight.rotation.x = Math.PI / 3
     armRight.castShadow = true
     this.mesh.add(armRight)
@@ -234,7 +234,7 @@ export class Enemy {
 
   private createWarningIndicator() {
     this.warningIndicator = new THREE.Group()
-    this.warningIndicator.position.set(0, 3.5, 0)
+    this.warningIndicator.position.set(0, 3.8, 0)
     this.warningIndicator.visible = false
 
     const exclamationGeometry = new THREE.CylinderGeometry(0.08, 0.08, 0.4, 8)
@@ -399,9 +399,9 @@ export class Enemy {
   }
 
   private animateCharacter(delta: number) {
-    const sittingY = 0.7
-    const standingY = 0.7
-    const headOffset = 0.5
+    const sittingY = 0.8
+    const standingY = 0.8
+    const headOffset = 0.8
     
     switch (this.animationState) {
       case 'sitting':

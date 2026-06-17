@@ -99,7 +99,7 @@ export class GameLoop {
       }
     }
 
-    if (this.player.getIsKicking() && !this.enemy.isLookingBack()) {
+    if (this.player.getIsKicking() && !this.enemy.isLookingBack() && !this.isLevelTransition) {
       const distance = this.player.getPosition().distanceTo(this.enemy.getPosition())
       if (distance < 2 && !this.kickCounted) {
         this.kickCount++

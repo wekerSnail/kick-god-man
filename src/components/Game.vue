@@ -59,6 +59,14 @@
       </div>
     </div>
 
+    <div v-if="gameState.isLevelTransition" class="level-transition-overlay">
+      <div class="level-transition-content">
+        <div class="level-complete-icon">🎉</div>
+        <h2>第 {{ gameState.level }} 关完成！</h2>
+        <p>准备进入第 {{ gameState.level + 1 }} 关...</p>
+      </div>
+    </div>
+
     <div v-if="gameState.isGameOver" class="game-over-overlay">
       <div class="game-over-content">
         <h2>{{ gameState.isWin ? '🎉 胜利！' : '💀 被发现了！' }}</h2>
@@ -116,7 +124,8 @@ const gameState = ref({
   isHidden: false,
   lastKickCount: 0,
   level: 1,
-  kickTarget: 5
+  kickTarget: 5,
+  isLevelTransition: false
 })
 
 const startGame = () => {
@@ -176,7 +185,8 @@ const restartGame = () => {
     isHidden: false,
     lastKickCount: 0,
     level: 1,
-    kickTarget: 5
+    kickTarget: 5,
+    isLevelTransition: false
   }
   gameStarted.value = false
   setTimeout(() => {
@@ -517,6 +527,63 @@ const handleResize = () => {
 .hidden-label {
   color: #4caf50;
   font-weight: bold;
+}
+
+.level-transition-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(102, 126, 234, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 90;
+  backdrop-filter: blur(4px);
+  animation: fadeInOut 2s ease-in-out;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.level-transition-content {
+  text-align: center;
+  color: white;
+  animation: bounceIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes bounceIn {
+  0% { transform: scale(0.3); opacity: 0; }
+  50% { transform: scale(1.05); }
+  70% { transform: scale(0.95); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.level-complete-icon {
+  font-size: 72px;
+  margin-bottom: 16px;
+  animation: iconPulse 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes iconPulse {
+  0% { transform: scale(1) rotate(0deg); }
+  100% { transform: scale(1.1) rotate(5deg); }
+}
+
+.level-transition-content h2 {
+  font-size: 36px;
+  margin-bottom: 12px;
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.level-transition-content p {
+  font-size: 20px;
+  opacity: 0.9;
 }
 
 .game-over-overlay,
