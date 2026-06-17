@@ -75,6 +75,9 @@
       <div class="hidden-status" v-if="gameState.isHidden">
         <span class="hidden-label">🛡️ 躲藏中</span>
       </div>
+      <div class="invisible-status" v-if="gameState.invisibleActive">
+        <span class="invisible-label">👻 隐身中</span>
+      </div>
     </div>
 
     <div v-if="gameState.isLevelTransition" class="level-transition-overlay">
@@ -149,7 +152,8 @@ const gameState = ref({
   equippedWeapon: null as any,
   isChargingThrow: false,
   attackCooldown: 0,
-  comboActive: false
+  comboActive: false,
+  invisibleActive: false
 })
 
 const startGame = () => {
@@ -214,7 +218,8 @@ const restartGame = () => {
     equippedWeapon: null,
     isChargingThrow: false,
     attackCooldown: 0,
-    comboActive: false
+    comboActive: false,
+    invisibleActive: false
   }
   gameStarted.value = false
   setTimeout(() => {
@@ -499,7 +504,7 @@ const handleResize = () => {
   border-top: 1px solid #e2e8f0;
 }
 
-.pot-status, .enemy-status, .hidden-status, .attack-status {
+.pot-status, .enemy-status, .hidden-status, .attack-status, .invisible-status {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -508,7 +513,7 @@ const handleResize = () => {
   border-radius: 8px;
 }
 
-.pot-label, .enemy-label, .hidden-label, .attack-label {
+.pot-label, .enemy-label, .hidden-label, .attack-label, .invisible-label {
   font-weight: 600;
   color: #475569;
 }
@@ -659,6 +664,17 @@ const handleResize = () => {
 .hidden-label {
   color: #4caf50;
   font-weight: bold;
+}
+
+.invisible-label {
+  color: #9c27b0;
+  font-weight: bold;
+  animation: invisiblePulse 0.5s infinite;
+}
+
+@keyframes invisiblePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 .level-transition-overlay {

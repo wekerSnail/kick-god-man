@@ -14,6 +14,9 @@ export class Player {
   private potActive: boolean = false
   private potStartTime: number = 0
   private comboActive: boolean = false
+  private invisibleActive: boolean = false
+  private invisibleStartTime: number = 0
+  private invisibleDuration: number = 5
   private input: InputManager
   private legLeft: THREE.Mesh
   private legRight: THREE.Mesh
@@ -446,6 +449,8 @@ export class Player {
       }
     }
 
+    this.updateInvisible(delta)
+
     if (this.input.isActionJustPressed('usePot')) {
       this.usePot()
     }
@@ -562,6 +567,44 @@ export class Player {
 
   isComboActive(): boolean {
     return this.comboActive
+  }
+
+  setInvisible(active: boolean): void {
+    this.invisibleActive = active
+    if (active) {
+      this.invisibleStartTime = this.invisibleDuration
+      this.setMeshOpacity(0.4)
+    } else {
+      this.setMeshOpacity(1.0)
+    }
+  }
+
+  isInvisible(): boolean {
+    return this.invisibleActive
+  }
+
+  private setMeshOpacity(opacity: number): void {
+    this.mesh.traverse(child => {
+      if (child instanceof THREE.Mesh && child.material) {
+        const mat = child.material as THREE.MeshStandardMaterial
+        mat.transparent = opacity < 1
+        mat.opacity = opacity
+        mat.needsUpdate = true
+      }
+    })
+  }
+
+  private updateInvisible(delta: number): void {
+    if (!this.invisibleActive) return
+    this.invisibleStartTime -= delta
+    if (this.invisibleStartTime <= 0) {
+      this.setInvisible(false)
+      return
+    }
+    if (this.invisibleStartTime < 1.5) {
+      const flicker = Math.sin(this.invisibleStartTime * 12) > 0 ? 0.4 : 0.8
+      this.setMeshOpacity(flicker)
+    }
   }
 
   getCameraPosition(): THREE.Vector3 {

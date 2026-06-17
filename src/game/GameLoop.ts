@@ -122,8 +122,18 @@ export class GameLoop {
     }
 
     if (this.collisionSystem.checkEnemyDetection()) {
-      const hasInvisible = this.inventory.some(p => p.type === 'invisible' && p.active)
-      if (!hasInvisible) {
+      if (this.player.isInvisible()) {
+        // invisible: no damage
+      } else if (this.player.getPotActive()) {
+        // keyboard: half damage (50% chance to take hit)
+        if (Math.random() < 0.5) {
+          this.health -= 0.5
+          this.audio.play('hit')
+          if (this.health <= 0) {
+            this.gameOver(false)
+          }
+        }
+      } else {
         this.health--
         this.audio.play('hit')
         if (this.health <= 0) {
@@ -233,7 +243,8 @@ export class GameLoop {
       equippedWeapon: this.player.getEquippedWeapon(),
       isChargingThrow: this.player.isCharging(),
       attackCooldown: this.player.getAttackCooldown(),
-      comboActive: this.player.isComboActive()
+      comboActive: this.player.isComboActive(),
+      invisibleActive: this.player.isInvisible()
     })
   }
 
@@ -296,6 +307,9 @@ export class GameLoop {
           if (item.type === 'combo') {
             this.player.setComboActive(false)
           }
+          if (item.type === 'invisible') {
+            this.player.setInvisible(false)
+          }
           return false
         }
       }
@@ -321,6 +335,9 @@ export class GameLoop {
         prop.count--
         if (prop.type === 'combo') {
           this.player.setComboActive(true)
+        }
+        if (prop.type === 'invisible') {
+          this.player.setInvisible(true)
         }
         if (prop.count <= 0) {
           this.inventory.splice(index, 1)

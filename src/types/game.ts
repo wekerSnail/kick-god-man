@@ -21,6 +21,7 @@ export interface UIState {
   isChargingThrow: boolean
   attackCooldown: number
   comboActive: boolean
+  invisibleActive: boolean
 }
 
 export interface InventorySlot {
