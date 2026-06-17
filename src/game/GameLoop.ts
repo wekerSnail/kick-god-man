@@ -4,6 +4,8 @@ import { Player } from './Player'
 import { Enemy } from './Enemy'
 import { Props } from './Props'
 import { HidingSpots } from './HidingSpots'
+import { EventBus } from './core/EventBus'
+import { InputManager } from './core/InputManager'
 
 export class GameLoop {
   private sceneManager: SceneManager
@@ -29,15 +31,23 @@ export class GameLoop {
   private levelTransitionTimer: number = 0
   private readonly LEVEL_TRANSITION_DURATION: number = 2
   private particles: THREE.Points[] = []
+  private events: EventBus
+  private input: InputManager
+  private clickHandler: () => void
 
   constructor(container: HTMLElement, onStateChange: (state: any) => void) {
     this.onStateChange = onStateChange
+    this.events = new EventBus()
+    this.input = new InputManager()
     this.sceneManager = new SceneManager(container)
-    this.player = new Player(this.sceneManager.getScene())
+    this.player = new Player(this.sceneManager.getScene(), this.input)
     this.enemy = new Enemy(this.sceneManager.getScene())
     this.props = new Props(this.sceneManager.getScene())
     this.hidingSpots = new HidingSpots(this.sceneManager.getScene())
     this.clock = new THREE.Clock()
+
+    this.clickHandler = () => this.player.kick()
+    document.addEventListener('click', this.clickHandler)
 
     this.sceneManager.getCamera().position.set(0, 10, 15)
     this.sceneManager.getCamera().lookAt(0, 0, 0)
@@ -238,9 +248,13 @@ export class GameLoop {
 
   dispose() {
     this.isRunning = false
+    document.removeEventListener('click', this.clickHandler)
+    this.player.dispose()
     this.sceneManager.dispose()
     this.props.dispose()
     this.hidingSpots.dispose()
+    this.input.dispose()
+    this.events.clear()
   }
 
   getKickCount(): number {

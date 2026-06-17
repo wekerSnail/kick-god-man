@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import type { InputManager } from './core/InputManager'
 
 export class Player {
   private mesh: THREE.Group
@@ -10,7 +11,7 @@ export class Player {
   private potCooldown: number = 0
   private potActive: boolean = false
   private potStartTime: number = 0
-  private keys: { [key: string]: boolean } = {}
+  private input: InputManager
   private legLeft: THREE.Mesh
   private legRight: THREE.Mesh
   private armLeft: THREE.Mesh
@@ -23,7 +24,8 @@ export class Player {
   private progressBar: THREE.Group
   private progressFill: THREE.Mesh
 
-  constructor(scene: THREE.Scene) {
+  constructor(scene: THREE.Scene, input: InputManager) {
+    this.input = input
     this.position = new THREE.Vector3(0, 0, 10)
     this.mesh = new THREE.Group()
     
@@ -31,8 +33,6 @@ export class Player {
     this.createKeyboard()
     this.createProgressBar()
     scene.add(this.mesh)
-
-    this.setupControls()
   }
 
   private createCharacterModel() {
@@ -194,28 +194,7 @@ export class Player {
     this.mesh.add(this.progressBar)
   }
 
-  private setupControls() {
-    document.addEventListener('keydown', (e) => {
-      this.keys[e.key.toLowerCase()] = true
-    })
-
-    document.addEventListener('keyup', (e) => {
-      this.keys[e.key.toLowerCase()] = false
-    })
-
-    document.addEventListener('click', () => {
-      this.kick()
-    })
-
-    document.addEventListener('keydown', (e) => {
-      if (e.code === 'Space') {
-        e.preventDefault()
-        this.usePot()
-      }
-    })
-  }
-
-  private kick() {
+  kick() {
     if (this.kickCooldown > 0 || this.isKicking || this.potActive) return
     
     this.isKicking = true
@@ -234,10 +213,10 @@ export class Player {
     const moveSpeed = this.speed * delta
     const direction = new THREE.Vector3()
 
-    if (this.keys['w']) direction.z -= 1
-    if (this.keys['s']) direction.z += 1
-    if (this.keys['a']) direction.x -= 1
-    if (this.keys['d']) direction.x += 1
+    if (this.input.isActionActive('moveForward')) direction.z -= 1
+    if (this.input.isActionActive('moveBackward')) direction.z += 1
+    if (this.input.isActionActive('moveLeft')) direction.x -= 1
+    if (this.input.isActionActive('moveRight')) direction.x += 1
 
     this.isMoving = direction.length() > 0
 
@@ -259,6 +238,10 @@ export class Player {
 
     this.updateWalkAnimation(delta)
     this.updateKeyboardPosition()
+
+    if (this.input.isActionJustPressed('usePot')) {
+      this.usePot()
+    }
 
     if (this.kickCooldown > 0) {
       this.kickCooldown -= delta
@@ -379,5 +362,17 @@ export class Player {
 
   getCameraTarget(): THREE.Vector3 {
     return new THREE.Vector3(this.position.x, 0, this.position.z - 3)
+  }
+
+  dispose(): void {
+    this.mesh.traverse(child => {
+      if (child instanceof THREE.Mesh) {
+        child.geometry?.dispose()
+        const mat = child.material
+        if (Array.isArray(mat)) mat.forEach(m => m.dispose())
+        else if (mat) mat.dispose()
+      }
+    })
+    this.mesh.parent?.remove(this.mesh)
   }
 }

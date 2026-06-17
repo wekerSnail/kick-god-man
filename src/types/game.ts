@@ -1,5 +1,35 @@
 import * as THREE from 'three'
 
+export interface UIState {
+  kickCount: number
+  health: number
+  maxHealth: number
+  isGameOver: boolean
+  isWin: boolean
+  score: number
+  inventory: InventorySlot[]
+  potCooldown: number
+  potActive: boolean
+  potRemainingTime: number
+  enemyState: string
+  isHidden: boolean
+  level: number
+  kickTarget: number
+  isLevelTransition: boolean
+  levelTransitionTimer: number
+}
+
+export interface InventorySlot {
+  id: string
+  type: PropType
+  name: string
+  icon: string
+  description: string
+  duration: number
+  active: boolean
+  startTime?: number
+}
+
 export interface Prop {
   id: string
   type: PropType
