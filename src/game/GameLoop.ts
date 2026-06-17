@@ -219,7 +219,8 @@ export class GameLoop {
       isLevelTransition: this.levelManager.getIsTransitioning(),
       levelTransitionTimer: this.levelManager.getTransitionTimer(),
       equippedWeapon: this.player.getEquippedWeapon(),
-      isChargingThrow: this.player.isCharging()
+      isChargingThrow: this.player.isCharging(),
+      attackCooldown: this.player.getAttackCooldown()
     })
   }
 

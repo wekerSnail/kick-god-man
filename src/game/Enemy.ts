@@ -32,7 +32,7 @@ export class Enemy {
   private meetingArmWave: number = 0
   private armLeft: THREE.Mesh
   private armRight: THREE.Mesh
-  private nextMeetingTime: number = 25
+  private nextMeetingTime: number = 15
 
   constructor(scene: THREE.Scene) {
     this.position = new THREE.Vector3(0, 0, -10)
@@ -392,11 +392,11 @@ export class Enemy {
 
     this.nextMeetingTime -= delta
     if (this.nextMeetingTime <= 0) {
-      const chance = 0.3 + (this.getDifficulty() - 1) * 0.1
+      const chance = 0.5 + (this.getDifficulty() - 1) * 0.1
       if (Math.random() < chance) {
         this.startMeeting(6)
       }
-      this.nextMeetingTime = 20 + Math.random() * 15
+      this.nextMeetingTime = 12 + Math.random() * 8
     }
   }
 

@@ -57,6 +57,11 @@
         <span v-else-if="gameState.potCooldown > 0" class="pot-cooldown">冷却中 ({{ Math.ceil(gameState.potCooldown) }}s)</span>
         <span v-else class="pot-ready">就绪 (按空格)</span>
       </div>
+      <div class="attack-status">
+        <span class="attack-label">攻击:</span>
+        <span v-if="gameState.attackCooldown > 0" class="attack-cooldown">冷却中 ({{ Math.ceil(gameState.attackCooldown) }}s)</span>
+        <span v-else class="attack-ready">就绪</span>
+      </div>
       <div class="enemy-status">
         <span class="enemy-label">神人:</span>
         <span v-if="gameState.enemyState === 'normal'" class="enemy-normal">用电脑</span>
@@ -140,7 +145,8 @@ const gameState = ref({
   kickTarget: 5,
   isLevelTransition: false,
   equippedWeapon: null as any,
-  isChargingThrow: false
+  isChargingThrow: false,
+  attackCooldown: 0
 })
 
 const startGame = () => {
@@ -203,7 +209,8 @@ const restartGame = () => {
     kickTarget: 5,
     isLevelTransition: false,
     equippedWeapon: null,
-    isChargingThrow: false
+    isChargingThrow: false,
+    attackCooldown: 0
   }
   gameStarted.value = false
   setTimeout(() => {
@@ -488,7 +495,7 @@ const handleResize = () => {
   border-top: 1px solid #e2e8f0;
 }
 
-.pot-status, .enemy-status, .hidden-status {
+.pot-status, .enemy-status, .hidden-status, .attack-status {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -497,7 +504,7 @@ const handleResize = () => {
   border-radius: 8px;
 }
 
-.pot-label, .enemy-label, .hidden-label {
+.pot-label, .enemy-label, .hidden-label, .attack-label {
   font-weight: 600;
   color: #475569;
 }
@@ -513,6 +520,22 @@ const handleResize = () => {
 
 .pot-ready {
   color: #2196f3;
+}
+
+.attack-cooldown {
+  color: #f44336;
+  font-weight: bold;
+  animation: cooldownPulse 0.5s infinite;
+}
+
+@keyframes cooldownPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.attack-ready {
+  color: #4caf50;
+  font-weight: bold;
 }
 
 .enemy-normal {

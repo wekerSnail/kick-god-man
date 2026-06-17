@@ -35,6 +35,8 @@ export class Player {
   private throwChargeSpeed: number = 2.0
   private throwProgressBar: THREE.Group
   private throwProgressFill: THREE.Mesh
+  private cooldownHintSprite: THREE.Sprite
+  private cooldownHintTimer: number = 0
 
   constructor(scene: THREE.Scene, input: InputManager) {
     this.input = input
@@ -44,6 +46,7 @@ export class Player {
     this.createCharacterModel()
     this.createKeyboard()
     this.createProgressBar()
+    this.createCooldownHint()
     scene.add(this.mesh)
   }
 
@@ -227,15 +230,42 @@ export class Player {
     this.mesh.add(this.throwProgressBar)
   }
 
+  private createCooldownHint() {
+    const canvas = document.createElement('canvas')
+    canvas.width = 256
+    canvas.height = 64
+    const ctx = canvas.getContext('2d')!
+    ctx.fillStyle = '#FF6B6B'
+    ctx.font = 'bold 28px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText('攻击冷却中...', 128, 44)
+    const texture = new THREE.CanvasTexture(canvas)
+    const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true, opacity: 0 })
+    this.cooldownHintSprite = new THREE.Sprite(spriteMat)
+    this.cooldownHintSprite.position.set(0, 3.2, 0)
+    this.cooldownHintSprite.scale.set(1.8, 0.45, 1)
+    this.mesh.add(this.cooldownHintSprite)
+  }
+
+  private showAttackCooldownHint() {
+    this.cooldownHintTimer = 1.0
+    ;(this.cooldownHintSprite.material as THREE.SpriteMaterial).opacity = 1
+  }
+
   kick() {
-    if (this.kickCooldown > 0 || this.isKicking || this.potActive) return
+    if (this.kickCooldown > 0 || this.isKicking || this.potActive) {
+      if (this.kickCooldown > 0) {
+        this.showAttackCooldownHint()
+      }
+      return
+    }
     if (this.equippedWeapon) {
       this.swingWeapon()
       return
     }
     this.isKicking = true
     this.kickAnimationTime = 0.3
-    this.kickCooldown = 1.0
+    this.kickCooldown = 5.0
   }
 
   equipWeapon(weapon: WeaponConfig): void {
@@ -256,10 +286,15 @@ export class Player {
   }
 
   private swingWeapon(): void {
-    if (!this.equippedWeapon || this.swingCooldown > 0 || this.isSwingingWeapon) return
+    if (!this.equippedWeapon || this.swingCooldown > 0 || this.isSwingingWeapon) {
+      if (this.swingCooldown > 0) {
+        this.showAttackCooldownHint()
+      }
+      return
+    }
     this.isSwingingWeapon = true
     this.swingTime = this.equippedWeapon.swingDuration
-    this.swingCooldown = this.equippedWeapon.swingDuration + 0.2
+    this.swingCooldown = 5.0
   }
 
   private updateWeaponSwing(delta: number): void {
@@ -391,6 +426,15 @@ export class Player {
     this.updateWeaponSwing(delta)
     this.updateThrowCharge(delta)
 
+    if (this.cooldownHintTimer > 0) {
+      this.cooldownHintTimer -= delta
+      const mat = this.cooldownHintSprite.material as THREE.SpriteMaterial
+      mat.opacity = Math.max(0, this.cooldownHintTimer)
+      if (this.cooldownHintTimer <= 0) {
+        mat.opacity = 0
+      }
+    }
+
     if (this.input.isActionJustPressed('usePot')) {
       this.usePot()
     }
@@ -506,6 +550,14 @@ export class Player {
 
   getKickCooldown(): number {
     return this.kickCooldown
+  }
+
+  getSwingCooldown(): number {
+    return this.swingCooldown
+  }
+
+  getAttackCooldown(): number {
+    return Math.max(this.kickCooldown, this.swingCooldown)
   }
 
   getCameraPosition(): THREE.Vector3 {
