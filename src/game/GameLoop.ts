@@ -6,6 +6,8 @@ import { Props } from './Props'
 import { HidingSpots } from './HidingSpots'
 import { EventBus } from './core/EventBus'
 import { InputManager } from './core/InputManager'
+import { CollisionSystem } from './systems/CollisionSystem'
+import { LevelManager } from './systems/LevelManager'
 
 export class GameLoop {
   private sceneManager: SceneManager
@@ -13,6 +15,8 @@ export class GameLoop {
   private enemy: Enemy
   private props: Props
   private hidingSpots: HidingSpots
+  private collisionSystem: CollisionSystem
+  private levelManager: LevelManager
   private clock: THREE.Clock
   private isRunning: boolean = false
   private kickCount: number = 0
@@ -24,12 +28,6 @@ export class GameLoop {
   private inventory: { id: string; type: string; name: string; icon: string; description: string; duration: number; active: boolean; startTime?: number }[] = []
   private onStateChange: (state: any) => void
   private kickCounted: boolean = false
-  private level: number = 1
-  private kickTarget: number = 5
-  private kickTargets: number[] = [5, 10, 20, 35, 50, 70, 100]
-  private isLevelTransition: boolean = false
-  private levelTransitionTimer: number = 0
-  private readonly LEVEL_TRANSITION_DURATION: number = 2
   private particles: THREE.Points[] = []
   private events: EventBus
   private input: InputManager
@@ -44,6 +42,8 @@ export class GameLoop {
     this.enemy = new Enemy(this.sceneManager.getScene())
     this.props = new Props(this.sceneManager.getScene())
     this.hidingSpots = new HidingSpots(this.sceneManager.getScene())
+    this.collisionSystem = new CollisionSystem(this.player, this.enemy, this.hidingSpots, this.props)
+    this.levelManager = new LevelManager(this.events)
     this.clock = new THREE.Clock()
 
     this.clickHandler = () => this.player.kick()
@@ -96,12 +96,9 @@ export class GameLoop {
       this.addProp(pickedProp)
     }
 
-    if (this.enemy.isActuallyLooking()) {
-      const isHidden = this.hidingSpots.isInHidingSpot(this.player.getPosition())
+    if (this.collisionSystem.checkEnemyDetection()) {
       const hasInvisible = this.inventory.some(p => p.type === 'invisible' && p.active)
-      const hasPot = this.player.getPotActive()
-
-      if (!isHidden && !hasInvisible && !hasPot) {
+      if (!hasInvisible) {
         this.health--
         if (this.health <= 0) {
           this.gameOver(false)
@@ -109,23 +106,12 @@ export class GameLoop {
       }
     }
 
-    if (this.player.getIsKicking() && !this.enemy.isLookingBack() && !this.isLevelTransition) {
-      const distance = this.player.getPosition().distanceTo(this.enemy.getPosition())
-      if (distance < 2 && !this.kickCounted) {
-        this.kickCount++
-        this.score += 10
-        this.kickCounted = true
-
-        if (this.kickCount >= this.kickTarget) {
-          if (this.level >= this.kickTargets.length) {
-            this.createVictoryParticles()
-            this.gameOver(true)
-          } else {
-            this.isLevelTransition = true
-            this.levelTransitionTimer = this.LEVEL_TRANSITION_DURATION
-            this.createVictoryParticles()
-          }
-        }
+    if (this.collisionSystem.checkKickHit() && !this.kickCounted && !this.levelManager.getIsTransitioning()) {
+      this.kickCount++
+      this.score += 10
+      this.kickCounted = true
+      if (this.levelManager.onKick(this.kickCount)) {
+        this.createVictoryParticles()
       }
     }
 
@@ -133,13 +119,9 @@ export class GameLoop {
       this.kickCounted = false
     }
 
-    if (this.isLevelTransition) {
-      this.levelTransitionTimer -= delta
+    if (this.levelManager.getIsTransitioning()) {
       this.updateParticles(delta)
-      if (this.levelTransitionTimer <= 0) {
-        this.isLevelTransition = false
-        this.level++
-        this.kickTarget = this.kickTargets[this.level - 1]
+      if (this.levelManager.update(delta)) {
         this.kickCount = 0
         this.clearParticles()
       }
@@ -160,10 +142,10 @@ export class GameLoop {
       potRemainingTime: this.player.getPotRemainingTime(),
       enemyState: this.enemy.getState(),
       isHidden: this.hidingSpots.isInHidingSpot(this.player.getPosition()),
-      level: this.level,
-      kickTarget: this.kickTarget,
-      isLevelTransition: this.isLevelTransition,
-      levelTransitionTimer: this.levelTransitionTimer
+      level: this.levelManager.getLevel(),
+      kickTarget: this.levelManager.getKickTarget(),
+      isLevelTransition: this.levelManager.getIsTransitioning(),
+      levelTransitionTimer: this.levelManager.getTransitionTimer()
     })
   }
 
@@ -369,9 +351,8 @@ export class GameLoop {
     this.isWin = false
     this.score = 0
     this.inventory = []
-    this.level = 1
-    this.kickTarget = this.kickTargets[0]
     this.kickCounted = false
+    this.levelManager.reset()
     this.isRunning = true
     this.clock.start()
     this.animate()
