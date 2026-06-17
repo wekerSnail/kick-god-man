@@ -8,6 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@babylonjs/core':
+        specifier: ^9.12.1
+        version: 9.12.1
+      '@babylonjs/loaders':
+        specifier: ^9.12.1
+        version: 9.12.1(@babylonjs/core@9.12.1)(babylonjs-gltf2interface@9.12.1)
       three:
         specifier: ^0.170.0
         version: 0.170.0
@@ -27,6 +33,9 @@ importers:
       vite:
         specifier: ^5.4.0
         version: 5.4.21
+      vite-plugin-wasm:
+        specifier: ^3.6.0
+        version: 3.6.0(vite@5.4.21)
       vue-tsc:
         specifier: ^2.0.0
         version: 2.2.12(typescript@5.6.3)
@@ -49,6 +58,15 @@ packages:
   '@babel/types@7.29.7':
     resolution: {integrity: sha512-4zBIxpPzowiZpusoFkyGVwakdRJUyuH5PxQ/PrqghfdFWWasvnCdPfQXHrenDai+gyLARulZjZowCOj6fjT4pA==}
     engines: {node: '>=6.9.0'}
+
+  '@babylonjs/core@9.12.1':
+    resolution: {integrity: sha512-QDL5KabYoOPeVwe10lr7neKjVNLiankur06HvavBv3Vgtzd5jXSoFSWsUCPmQ0X3k5PLukwTeA/skxWGkwSTbw==}
+
+  '@babylonjs/loaders@9.12.1':
+    resolution: {integrity: sha512-MABW2Ovk5ddMmTikIuMLctA3aoNirTwMNlGLrswKEcxUAlPjISemQCTilSVjxl3/I899K1+/78hCsF2KO9AbSQ==}
+    peerDependencies:
+      '@babylonjs/core': ^9.0.0
+      babylonjs-gltf2interface: ^9.0.0
 
   '@dimforge/rapier3d-compat@0.12.0':
     resolution: {integrity: sha512-uekIGetywIgopfD97oDL5PfeezkFpNhwlzlaEYNOA0N6ghdsOvh/HYjSMek5Q2O1PYvRSDFcqFVJl4r4ZBwOow==}
@@ -406,6 +424,9 @@ packages:
   alien-signals@1.0.13:
     resolution: {integrity: sha512-OGj9yyTnJEttvzhTUWuscOvtqxq5vrhF7vL9oS0xJ2mK0ItPYP1/y+vCFebfxoEyAz0++1AIwJ5CMr+Fk3nDmg==}
 
+  babylonjs-gltf2interface@9.12.1:
+    resolution: {integrity: sha512-OWDJYW/zK63d7s2Yz+zoPlQqzTYFKmZ9aiSRc49nlX7p6RWhwscCXPn4pmkUSUZ6NvmasD7kxTLMFfrdW0E0Jg==}
+
   balanced-match@1.0.2:
     resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
 
@@ -487,6 +508,11 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
+  vite-plugin-wasm@3.6.0:
+    resolution: {integrity: sha512-mL/QPziiIA4RAA6DkaZZzOstdwbW5jO4Vz7Zenj0wieKWBlNvIvX5L5ljum9lcUX0ShNfBgCNLKTjNkRVVqcsw==}
+    peerDependencies:
+      vite: ^2 || ^3 || ^4 || ^5 || ^6 || ^7 || ^8
+
   vite@5.4.21:
     resolution: {integrity: sha512-o5a9xKjbtuhY6Bi5S3+HvbRERmouabWbyUcpXXUA1u+GNUKoROi9byOJ8M0nHbHYHkYICiMlqxkg1KkYmm25Sw==}
     engines: {node: ^18.0.0 || >=20.0.0}
@@ -549,6 +575,13 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.29.7
       '@babel/helper-validator-identifier': 7.29.7
+
+  '@babylonjs/core@9.12.1': {}
+
+  '@babylonjs/loaders@9.12.1(@babylonjs/core@9.12.1)(babylonjs-gltf2interface@9.12.1)':
+    dependencies:
+      '@babylonjs/core': 9.12.1
+      babylonjs-gltf2interface: 9.12.1
 
   '@dimforge/rapier3d-compat@0.12.0': {}
 
@@ -806,6 +839,8 @@ snapshots:
 
   alien-signals@1.0.13: {}
 
+  babylonjs-gltf2interface@9.12.1: {}
+
   balanced-match@1.0.2: {}
 
   brace-expansion@2.1.1:
@@ -913,6 +948,10 @@ snapshots:
   three@0.170.0: {}
 
   typescript@5.6.3: {}
+
+  vite-plugin-wasm@3.6.0(vite@5.4.21):
+    dependencies:
+      vite: 5.4.21
 
   vite@5.4.21:
     dependencies:

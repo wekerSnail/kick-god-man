@@ -1,0 +1,55 @@
+/* ============================================================================
+   昭和 Office 怪谈（Showa Office Kwaidan）设计系统
+   一个深夜昏黄办公楼里、潜行踹人的黑色幽默世界。
+   色彩：暖褐 + 苔绿 + 朱砂，绝无紫色。字体：日式像素 + 印章感。
+   ========================================================================== */
+
+:root {
+  /* ===== 色彩 ===== */
+  --ink:              #14110d;   /* 油墨黑，正文/强对比 */
+  --ink-soft:         #2b241a;   /* 次级文字 */
+  --paper:            #e8dcc0;   /* 泛黄打印纸，主背景 */
+  --paper-warm:       #d4c4a0;   /* 阴影面的纸 */
+  --paper-dark:       #a8946a;   /* 折痕/分割线 */
+  --amber:            #c8902c;   /* 白炽灯暖橙，强调 */
+  --amber-glow:       #f4c46a;   /* 点亮的灯泡 */
+  --moss:             #4a6b3a;   /* 苔绿，安全/就绪 */
+  --moss-dark:        #2d4222;   /* 深苔，躲藏中 */
+  --vermilion:        #c1351c;   /* 朱砂红，危险/警告 */
+  --vermilion-bright: #e84a1c;   /* 闪烁的警告 */
+  --steel:            #6b6660;   /* 文件柜灰 */
+  --bone:             #cfc4a8;   /* 骨白，反色文字 */
+
+  /* ===== 字体 ===== */
+  --font-display: 'DotGothic16', 'Zen Kaku Gothic New', 'Noto Sans JP', sans-serif;
+  --font-body:    'Zen Kaku Gothic New', 'Noto Sans SC', sans-serif;
+  --font-mono:    'VT323', 'Courier New', monospace;
+  --font-stamp:   'Reggae One', 'DotGothic16', cursive;
+
+  /* ===== 间距（4px 栅格）===== */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 24px; --sp-6: 32px; --sp-7: 48px; --sp-8: 64px;
+
+  /* ===== 圆角：刻意不统一，制造手工感 ===== */
+  --radius-sharp: 0px;
+  --radius-soft:  2px;
+  --radius-pill:  999px;
+
+  /* ===== 边框 ===== */
+  --border-solid:  1px solid var(--ink);
+  --border-double: 3px double var(--ink);
+  --border-dashed: 1px dashed var(--paper-dark);
+
+  /* ===== 阴影：硬阴影（无模糊），仿丝网印刷 ===== */
+  --shadow-hard:    4px 4px 0 var(--ink);
+  --shadow-hard-sm: 2px 2px 0 var(--ink);
+  --shadow-press:   inset 2px 2px 0 var(--ink);
+
+  /* ===== 动效曲线 ===== */
+  --ease-office: cubic-bezier(0.4, 0, 0.2, 1);     /* 办公室般的克制 */
+  --ease-stamp:  cubic-bezier(0.16, 1, 0.3, 1);    /* 盖章般果断 */
+  --ease-kick:   cubic-bezier(0.34, 1.56, 0.64, 1);/* 仅踹中瞬间 */
+
+  /* ===== 背景纹理：内联 SVG 噪点，无网络依赖 ===== */
+  --bg-paper-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.08 0 0 0 0 0.07 0 0 0 0 0.05 0 0 0 0.08 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}

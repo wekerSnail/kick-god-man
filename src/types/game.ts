@@ -1,4 +1,8 @@
-import * as THREE from 'three'
+export interface Vec3 {
+  x: number
+  y: number
+  z: number
+}
 
 export interface UIState {
   kickCount: number
@@ -165,28 +169,28 @@ export const WEAPON_CONFIGS: WeaponConfig[] = [
 
 export interface HidingSpot {
   id: string
-  position: THREE.Vector3
-  size: THREE.Vector3
+  position: Vec3
+  size: Vec3
   name: string
 }
 
 export const HIDING_SPOTS: HidingSpot[] = [
   {
     id: 'plant',
-    position: new THREE.Vector3(-8, 0, -8),
-    size: new THREE.Vector3(2, 3, 2),
+    position: { x: -8, y: 0, z: -8 },
+    size: { x: 2, y: 3, z: 2 },
     name: '盆栽'
   },
   {
     id: 'cabinet',
-    position: new THREE.Vector3(8, 0, -8),
-    size: new THREE.Vector3(3, 2, 1),
+    position: { x: 8, y: 0, z: -8 },
+    size: { x: 3, y: 2, z: 1 },
     name: '文件柜'
   },
   {
     id: 'sofa',
-    position: new THREE.Vector3(-8, 0, 8),
-    size: new THREE.Vector3(4, 1, 2),
+    position: { x: -8, y: 0, z: 8 },
+    size: { x: 4, y: 1, z: 2 },
     name: '沙发'
   }
 ]
