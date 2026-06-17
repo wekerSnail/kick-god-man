@@ -35,6 +35,8 @@ export class GameLoop {
   private events: EventBus
   private input: InputManager
   private clickHandler: () => void
+  private cameraTarget = new THREE.Vector3()
+  private cameraOffset = new THREE.Vector3(0, 8, 6)
 
   constructor(container: HTMLElement, onStateChange: (state: any) => void) {
     this.onStateChange = onStateChange
@@ -83,10 +85,14 @@ export class GameLoop {
 
     this.player.update(delta)
 
-    const cameraPos = this.player.getCameraPosition()
-    const cameraTarget = this.player.getCameraTarget()
-    this.sceneManager.getCamera().position.lerp(cameraPos, 0.15)
-    this.sceneManager.getCamera().lookAt(cameraTarget)
+    const playerPos = this.player.getPosition()
+    this.cameraTarget.set(playerPos.x, 0, playerPos.z - 3)
+    const camera = this.sceneManager.getCamera()
+    camera.position.lerp(
+      this.cameraOffset.set(playerPos.x, 8, playerPos.z + 6),
+      1 - Math.pow(0.001, delta)
+    )
+    camera.lookAt(this.cameraTarget)
 
     this.enemy.update(
       delta,
