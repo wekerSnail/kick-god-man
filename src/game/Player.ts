@@ -1,5 +1,7 @@
 import * as THREE from 'three'
 import type { InputManager } from './core/InputManager'
+import type { WeaponConfig } from '../types/game'
+import { createWeaponMesh } from './weapons/WeaponModels'
 
 export class Player {
   private mesh: THREE.Group
@@ -23,6 +25,11 @@ export class Player {
   private targetRotation: number = 0
   private progressBar: THREE.Group
   private progressFill: THREE.Mesh
+  private equippedWeapon: WeaponConfig | null = null
+  private weaponMesh: THREE.Group | null = null
+  private isSwingingWeapon: boolean = false
+  private swingTime: number = 0
+  private swingCooldown: number = 0
 
   constructor(scene: THREE.Scene, input: InputManager) {
     this.input = input
@@ -196,10 +203,68 @@ export class Player {
 
   kick() {
     if (this.kickCooldown > 0 || this.isKicking || this.potActive) return
-    
+    if (this.equippedWeapon) {
+      this.swingWeapon()
+      return
+    }
     this.isKicking = true
     this.kickAnimationTime = 0.3
     this.kickCooldown = 1.0
+  }
+
+  equipWeapon(weapon: WeaponConfig): void {
+    this.unequipWeapon()
+    this.equippedWeapon = weapon
+    this.weaponMesh = createWeaponMesh(weapon.type)
+    this.weaponMesh.position.set(0, -0.35, 0)
+    this.armRight.add(this.weaponMesh)
+  }
+
+  unequipWeapon(): void {
+    if (this.weaponMesh) {
+      this.armRight.remove(this.weaponMesh)
+      this.weaponMesh = null
+    }
+    this.equippedWeapon = null
+    this.isSwingingWeapon = false
+  }
+
+  private swingWeapon(): void {
+    if (!this.equippedWeapon || this.swingCooldown > 0 || this.isSwingingWeapon) return
+    this.isSwingingWeapon = true
+    this.swingTime = this.equippedWeapon.swingDuration
+    this.swingCooldown = this.equippedWeapon.swingDuration + 0.2
+  }
+
+  private updateWeaponSwing(delta: number): void {
+    if (this.isSwingingWeapon && this.equippedWeapon) {
+      this.swingTime -= delta
+      const progress = 1 - (this.swingTime / this.equippedWeapon.swingDuration)
+      this.armRight.rotation.x = -Math.PI * 0.8 * Math.sin(progress * Math.PI)
+      if (this.weaponMesh) {
+        this.weaponMesh.rotation.z = Math.PI * 0.3 * Math.sin(progress * Math.PI)
+      }
+      if (this.swingTime <= 0) {
+        this.isSwingingWeapon = false
+        this.armRight.rotation.x = 0
+        if (this.weaponMesh) this.weaponMesh.rotation.z = 0
+      }
+    }
+    if (this.swingCooldown > 0) {
+      this.swingCooldown -= delta
+    }
+  }
+
+  hasEquippedWeapon(): boolean {
+    return this.equippedWeapon !== null
+  }
+
+  getEquippedWeapon(): WeaponConfig | null {
+    return this.equippedWeapon
+  }
+
+  getIsSwinging(): boolean {
+    return this.isSwingingWeapon
   }
 
   private usePot() {
@@ -238,6 +303,7 @@ export class Player {
 
     this.updateWalkAnimation(delta)
     this.updateKeyboardPosition()
+    this.updateWeaponSwing(delta)
 
     if (this.input.isActionJustPressed('usePot')) {
       this.usePot()

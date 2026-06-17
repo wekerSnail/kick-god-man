@@ -17,6 +17,7 @@ export interface UIState {
   kickTarget: number
   isLevelTransition: boolean
   levelTransitionTimer: number
+  equippedWeapon: WeaponConfig | null
 }
 
 export interface InventorySlot {
@@ -27,6 +28,7 @@ export interface InventorySlot {
   description: string
   duration: number
   active: boolean
+  category?: 'consumable' | 'weapon'
   startTime?: number
 }
 
@@ -38,10 +40,11 @@ export interface Prop {
   description: string
   duration: number
   active: boolean
+  category?: 'consumable' | 'weapon'
   startTime?: number
 }
 
-export type PropType = 'speed' | 'invisible' | 'noise' | 'power'
+export type PropType = 'speed' | 'invisible' | 'noise' | 'power' | 'mace' | 'bat' | 'frying_pan' | 'ruler'
 
 export interface PropConfig {
   type: PropType
@@ -50,6 +53,15 @@ export interface PropConfig {
   description: string
   duration: number
   spawnChance: number
+  category?: 'consumable' | 'weapon'
+}
+
+export interface WeaponConfig extends PropConfig {
+  category: 'weapon'
+  damage: number
+  stunDuration: number
+  swingDuration: number
+  swingRange: number
 }
 
 export const PROP_CONFIGS: PropConfig[] = [
@@ -59,7 +71,8 @@ export const PROP_CONFIGS: PropConfig[] = [
     icon: '👟',
     description: '移动速度x2',
     duration: 5000,
-    spawnChance: 0.25
+    spawnChance: 0.20,
+    category: 'consumable'
   },
   {
     type: 'invisible',
@@ -67,7 +80,8 @@ export const PROP_CONFIGS: PropConfig[] = [
     icon: '🧪',
     description: '不被发现',
     duration: 5000,
-    spawnChance: 0.25
+    spawnChance: 0.20,
+    category: 'consumable'
   },
   {
     type: 'noise',
@@ -75,7 +89,8 @@ export const PROP_CONFIGS: PropConfig[] = [
     icon: '📢',
     description: '吸引神人注意力',
     duration: 3000,
-    spawnChance: 0.25
+    spawnChance: 0.15,
+    category: 'consumable'
   },
   {
     type: 'power',
@@ -83,7 +98,63 @@ export const PROP_CONFIGS: PropConfig[] = [
     icon: '🧤',
     description: '踹击计数+2',
     duration: 5000,
-    spawnChance: 0.25
+    spawnChance: 0.15,
+    category: 'consumable'
+  }
+]
+
+export const WEAPON_CONFIGS: WeaponConfig[] = [
+  {
+    type: 'mace',
+    name: '狼牙棒',
+    icon: '🏏',
+    description: '击中造成眩晕3秒',
+    category: 'weapon',
+    damage: 1,
+    stunDuration: 3,
+    swingDuration: 0.4,
+    swingRange: 2.5,
+    spawnChance: 0.12,
+    duration: 0
+  },
+  {
+    type: 'bat',
+    name: '棒球棒',
+    icon: '⚾',
+    description: '击中造成眩晕2秒',
+    category: 'weapon',
+    damage: 1,
+    stunDuration: 2,
+    swingDuration: 0.35,
+    swingRange: 2.8,
+    spawnChance: 0.10,
+    duration: 0
+  },
+  {
+    type: 'frying_pan',
+    name: '平底锅',
+    icon: '🍳',
+    description: '击中造成眩晕1.5秒',
+    category: 'weapon',
+    damage: 1,
+    stunDuration: 1.5,
+    swingDuration: 0.3,
+    swingRange: 2.0,
+    spawnChance: 0.05,
+    duration: 0
+  },
+  {
+    type: 'ruler',
+    name: '戒尺',
+    icon: '📏',
+    description: '击中造成眩晕1秒, 攻速快',
+    category: 'weapon',
+    damage: 1,
+    stunDuration: 1,
+    swingDuration: 0.2,
+    swingRange: 2.2,
+    spawnChance: 0.03,
+    duration: 0
   }
 ]
 

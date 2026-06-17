@@ -3,7 +3,7 @@ import * as THREE from 'three'
 export class Enemy {
   private mesh: THREE.Group
   private position: THREE.Vector3
-  private state: 'normal' | 'phone_flashing' | 'looking_back' = 'normal'
+  private state: 'normal' | 'phone_flashing' | 'looking_back' | 'stunned' | 'meeting' = 'normal'
   private phoneFlashTimer: number = 0
   private nextLookBackTime: number = 8
   private phoneMesh: THREE.Mesh
@@ -22,6 +22,15 @@ export class Enemy {
   private readonly LOOK_DURATION: number = 2
   private readonly SIT_DOWN_DURATION: number = 0.5
 
+  private isStunned: boolean = false
+  private stunTimer: number = 0
+  private stunIndicator: THREE.Group
+  private isMeeting: boolean = false
+  private meetingTimer: number = 0
+  private meetingShield: THREE.Mesh
+  private meetingTextSprite: THREE.Sprite
+  private meetingArmWave: number = 0
+
   constructor(scene: THREE.Scene) {
     this.position = new THREE.Vector3(0, 0, -10)
     this.mesh = new THREE.Group()
@@ -33,6 +42,8 @@ export class Enemy {
     this.createCharacterModel()
     this.createPhone()
     this.createWarningIndicator()
+    this.createStunIndicator()
+    this.createMeetingIndicator()
     
     scene.add(this.mesh)
 
@@ -270,6 +281,55 @@ export class Enemy {
     this.mesh.add(this.warningIndicator)
   }
 
+  private createStunIndicator() {
+    this.stunIndicator = new THREE.Group()
+    this.stunIndicator.position.set(0, 3.5, 0)
+    this.stunIndicator.visible = false
+
+    const starGeom = new THREE.SphereGeometry(0.08, 4, 4)
+    const starMat = new THREE.MeshBasicMaterial({ color: 0xFFD700 })
+    for (let i = 0; i < 3; i++) {
+      const star = new THREE.Mesh(starGeom, starMat)
+      star.position.set(
+        Math.cos((i / 3) * Math.PI * 2) * 0.3,
+        0,
+        Math.sin((i / 3) * Math.PI * 2) * 0.3
+      )
+      this.stunIndicator.add(star)
+    }
+    this.mesh.add(this.stunIndicator)
+  }
+
+  private createMeetingIndicator() {
+    const shieldGeom = new THREE.TorusGeometry(1.5, 0.08, 8, 32)
+    const shieldMat = new THREE.MeshBasicMaterial({
+      color: 0xFF4444,
+      transparent: true,
+      opacity: 0.6
+    })
+    this.meetingShield = new THREE.Mesh(shieldGeom, shieldMat)
+    this.meetingShield.rotation.x = Math.PI / 2
+    this.meetingShield.position.y = 1.2
+    this.meetingShield.visible = false
+    this.mesh.add(this.meetingShield)
+
+    const canvas = document.createElement('canvas')
+    canvas.width = 256
+    canvas.height = 64
+    const ctx = canvas.getContext('2d')!
+    ctx.fillStyle = '#FF4444'
+    ctx.font = 'bold 36px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText('📢 开会中...', 128, 44)
+    const texture = new THREE.CanvasTexture(canvas)
+    const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true })
+    this.meetingTextSprite = new THREE.Sprite(spriteMat)
+    this.meetingTextSprite.position.set(0, 3.5, 0)
+    this.meetingTextSprite.scale.set(2, 0.5, 1)
+    this.meetingTextSprite.visible = false
+    this.mesh.add(this.meetingTextSprite)
+  }
+
   private scheduleNextLookBack() {
     const difficulty = this.getDifficulty()
     const minInterval = Math.max(3, 8 - difficulty)
@@ -282,6 +342,16 @@ export class Enemy {
   }
 
   update(delta: number, playerPosition: THREE.Vector3, playerIsKicking: boolean, playerPotActive: boolean) {
+    if (this.isStunned) {
+      this.updateStun(delta)
+      return
+    }
+
+    if (this.isMeeting) {
+      this.updateMeeting(delta)
+      return
+    }
+
     switch (this.state) {
       case 'normal':
         this.updateNormal(delta)
@@ -484,6 +554,61 @@ export class Enemy {
 
   getPosition(): THREE.Vector3 {
     return this.position
+  }
+
+  applyStun(duration: number): void {
+    this.isStunned = true
+    this.stunTimer = duration
+    this.state = 'normal'
+    this.animationState = 'sitting'
+    this.stunIndicator.visible = true
+  }
+
+  private updateStun(delta: number): void {
+    this.stunTimer -= delta
+    this.stunIndicator.rotation.y += delta * 5
+    this.body.rotation.z = Math.sin(this.stunTimer * 3) * 0.05
+    if (this.stunTimer <= 0) {
+      this.isStunned = false
+      this.stunIndicator.visible = false
+      this.body.rotation.z = 0
+      this.scheduleNextLookBack()
+    }
+  }
+
+  private updateMeeting(delta: number): void {
+    this.meetingTimer -= delta
+    this.meetingShield.rotation.z += delta * 2
+    const breathe = 0.5 + Math.sin(this.meetingTimer * 3) * 0.2
+    ;(this.meetingShield.material as THREE.MeshBasicMaterial).opacity = breathe
+    this.body.rotation.x = Math.sin(this.meetingTimer * 4) * 0.05
+    this.body.rotation.z = Math.sin(this.meetingTimer * 3) * 0.03
+    this.meetingArmWave += delta * 5
+    if (this.meetingTimer <= 0) {
+      this.isMeeting = false
+      this.meetingShield.visible = false
+      this.meetingTextSprite.visible = false
+      this.body.rotation.x = 0
+      this.body.rotation.z = 0
+      this.state = 'normal'
+      this.scheduleNextLookBack()
+    }
+  }
+
+  startMeeting(duration: number): void {
+    this.isMeeting = true
+    this.meetingTimer = duration
+    this.state = 'meeting'
+    this.meetingShield.visible = true
+    this.meetingTextSprite.visible = true
+  }
+
+  isInMeeting(): boolean {
+    return this.isMeeting
+  }
+
+  isInStun(): boolean {
+    return this.isStunned
   }
 
   dispose(): void {

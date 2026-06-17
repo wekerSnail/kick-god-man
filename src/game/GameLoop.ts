@@ -8,6 +8,7 @@ import { EventBus } from './core/EventBus'
 import { InputManager } from './core/InputManager'
 import { CollisionSystem } from './systems/CollisionSystem'
 import { LevelManager } from './systems/LevelManager'
+import { WEAPON_CONFIGS } from '../types/game'
 
 export class GameLoop {
   private sceneManager: SceneManager
@@ -25,7 +26,7 @@ export class GameLoop {
   private isGameOver: boolean = false
   private isWin: boolean = false
   private score: number = 0
-  private inventory: { id: string; type: string; name: string; icon: string; description: string; duration: number; active: boolean; startTime?: number }[] = []
+  private inventory: { id: string; type: string; name: string; icon: string; description: string; duration: number; active: boolean; startTime?: number; category?: string }[] = []
   private onStateChange: (state: any) => void
   private kickCounted: boolean = false
   private particles: THREE.Points[] = []
@@ -106,16 +107,39 @@ export class GameLoop {
       }
     }
 
-    if (this.collisionSystem.checkKickHit() && !this.kickCounted && !this.levelManager.getIsTransitioning()) {
-      this.kickCount++
-      this.score += 10
-      this.kickCounted = true
-      if (this.levelManager.onKick(this.kickCount)) {
-        this.createVictoryParticles()
+    if ((this.player.getIsKicking() || this.player.getIsSwinging()) && !this.levelManager.getIsTransitioning()) {
+      const distance = this.player.getPosition().distanceTo(this.enemy.getPosition())
+
+      if (this.enemy.isInMeeting()) {
+        if (this.player.getIsSwinging() && !this.kickCounted) {
+          this.player.unequipWeapon()
+          this.kickCounted = true
+        }
+      } else if (!this.enemy.isLookingBack() && !this.kickCounted) {
+        if (this.player.getIsSwinging()) {
+          const weapon = this.player.getEquippedWeapon()
+          if (weapon && distance < weapon.swingRange) {
+            this.kickCount += weapon.damage
+            this.score += 10
+            this.kickCounted = true
+            if (weapon.stunDuration > 0) {
+              this.enemy.applyStun(weapon.stunDuration)
+            }
+            this.player.unequipWeapon()
+            this.levelManager.onKick(this.kickCount)
+          }
+        } else if (this.player.getIsKicking() && distance < 2) {
+          this.kickCount++
+          this.score += 10
+          this.kickCounted = true
+          if (this.levelManager.onKick(this.kickCount)) {
+            this.createVictoryParticles()
+          }
+        }
       }
     }
 
-    if (!this.player.getIsKicking()) {
+    if (!this.player.getIsKicking() && !this.player.getIsSwinging()) {
       this.kickCounted = false
     }
 
@@ -145,11 +169,13 @@ export class GameLoop {
       level: this.levelManager.getLevel(),
       kickTarget: this.levelManager.getKickTarget(),
       isLevelTransition: this.levelManager.getIsTransitioning(),
-      levelTransitionTimer: this.levelManager.getTransitionTimer()
+      levelTransitionTimer: this.levelManager.getTransitionTimer(),
+      equippedWeapon: this.player.getEquippedWeapon()
     })
   }
 
   private addProp(prop: any) {
+    const isWeapon = prop.category === 'weapon'
     const config = {
       id: prop.id,
       type: prop.type,
@@ -157,7 +183,8 @@ export class GameLoop {
       icon: this.getPropIcon(prop.type),
       description: this.getPropDescription(prop.type),
       duration: prop.duration,
-      active: false
+      active: false,
+      category: isWeapon ? 'weapon' as const : 'consumable' as const
     }
     this.inventory.push(config)
   }
@@ -207,7 +234,13 @@ export class GameLoop {
   useProp(index: number) {
     if (index >= 0 && index < this.inventory.length) {
       const prop = this.inventory[index]
-      if (!prop.active) {
+      if (prop.category === 'weapon') {
+        const weaponConfig = WEAPON_CONFIGS.find(w => w.type === prop.type)
+        if (weaponConfig) {
+          this.player.equipWeapon(weaponConfig)
+          this.inventory.splice(index, 1)
+        }
+      } else if (!prop.active) {
         prop.active = true
         prop.startTime = Date.now()
       }

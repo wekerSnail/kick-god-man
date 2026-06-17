@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import type { PropType } from '../types/game'
-import { PROP_CONFIGS } from '../types/game'
+import { PROP_CONFIGS, WEAPON_CONFIGS } from '../types/game'
+import { createWeaponPickupMesh } from './weapons/WeaponModels'
 
 export interface PropItem {
   id: string
@@ -9,6 +10,7 @@ export interface PropItem {
   position: THREE.Vector3
   spawnTime: number
   duration: number
+  category?: 'consumable' | 'weapon'
 }
 
 export class Props {
@@ -38,11 +40,12 @@ export class Props {
   }
 
   private spawnProp() {
+    const allConfigs = [...PROP_CONFIGS, ...WEAPON_CONFIGS]
     const random = Math.random()
     let cumulative = 0
-    let selectedConfig = PROP_CONFIGS[0]
+    let selectedConfig = allConfigs[0]
 
-    for (const config of PROP_CONFIGS) {
+    for (const config of allConfigs) {
       cumulative += config.spawnChance
       if (random <= cumulative) {
         selectedConfig = config
@@ -56,7 +59,10 @@ export class Props {
       (Math.random() - 0.5) * 20
     )
 
-    const mesh = this.createPropMesh(selectedConfig.type)
+    const isWeapon = selectedConfig.category === 'weapon'
+    const mesh = isWeapon
+      ? createWeaponPickupMesh(selectedConfig.type)
+      : this.createPropMesh(selectedConfig.type)
     mesh.position.copy(position)
     this.scene.add(mesh)
 
@@ -66,7 +72,8 @@ export class Props {
       mesh,
       position,
       spawnTime: Date.now(),
-      duration: selectedConfig.duration
+      duration: selectedConfig.duration,
+      category: selectedConfig.category
     }
 
     this.props.push(prop)

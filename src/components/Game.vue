@@ -21,17 +21,18 @@
     <div ref="gameContainer" class="game-canvas-container"></div>
 
     <div class="inventory">
-      <div class="inventory-label">道具栏 (按 1/2/3 使用)</div>
+      <div class="inventory-label">道具栏 (按 1/2/3 使用) | {{ gameState.equippedWeapon ? '装备中: ' + gameState.equippedWeapon.name + ' (点击挥砍)' : '鼠标左键踹击' }}</div>
       <div class="inventory-items">
         <div 
           v-for="(item, index) in gameState.inventory" :key="item.id"
           class="inventory-slot"
-          :class="{ active: item.active }"
+          :class="{ active: item.active, weapon: item.category === 'weapon' }"
           @click="useProp(index)"
           :title="item.description"
         >
           <span class="prop-icon">{{ item.icon }}</span>
           <span class="prop-name">{{ item.name }}</span>
+          <span v-if="item.category === 'weapon'" class="weapon-badge">武器</span>
           <span class="prop-key">{{ index + 1 }}</span>
         </div>
         <div v-for="i in (3 - gameState.inventory.length)" :key="'empty-' + i" class="inventory-slot empty">
@@ -53,6 +54,8 @@
         <span v-if="gameState.enemyState === 'normal'" class="enemy-normal">用电脑</span>
         <span v-else-if="gameState.enemyState === 'phone_flashing'" class="enemy-warning">⚠️ 手机闪烁</span>
         <span v-else-if="gameState.enemyState === 'looking_back'" class="enemy-looking">👀 回头检查</span>
+        <span v-else-if="gameState.enemyState === 'stunned'" class="enemy-stunned">💫 眩晕中</span>
+        <span v-else-if="gameState.enemyState === 'meeting'" class="enemy-meeting">📢 开会中! 攻击无效</span>
       </div>
       <div class="hidden-status" v-if="gameState.isHidden">
         <span class="hidden-label">🛡️ 躲藏中</span>
@@ -125,7 +128,8 @@ const gameState = ref({
   lastKickCount: 0,
   level: 1,
   kickTarget: 5,
-  isLevelTransition: false
+  isLevelTransition: false,
+  equippedWeapon: null as any
 })
 
 const startGame = () => {
@@ -186,7 +190,8 @@ const restartGame = () => {
     lastKickCount: 0,
     level: 1,
     kickTarget: 5,
-    isLevelTransition: false
+    isLevelTransition: false,
+    equippedWeapon: null
   }
   gameStarted.value = false
   setTimeout(() => {
@@ -522,6 +527,43 @@ const handleResize = () => {
 @keyframes lookingPulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.1); }
+}
+
+.enemy-stunned {
+  color: #ffd700;
+  font-weight: bold;
+  animation: stunPulse 0.5s infinite;
+}
+
+@keyframes stunPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.enemy-meeting {
+  color: #FF4444;
+  font-weight: bold;
+  animation: meetingPulse 0.8s infinite;
+}
+
+@keyframes meetingPulse {
+  0%, 100% { opacity: 1; text-shadow: 0 0 8px rgba(255, 68, 68, 0.6); }
+  50% { opacity: 0.7; text-shadow: 0 0 16px rgba(255, 68, 68, 0.9); }
+}
+
+.inventory-slot.weapon {
+  border-color: #ff9800;
+  background: linear-gradient(145deg, #fff3e0 0%, #ffe0b2 100%);
+}
+
+.weapon-badge {
+  font-size: 8px;
+  color: #ff9800;
+  font-weight: bold;
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .hidden-label {
