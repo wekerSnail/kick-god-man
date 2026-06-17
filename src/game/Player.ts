@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import type { InputManager } from './core/InputManager'
 import type { WeaponConfig } from '../types/game'
 import { createWeaponMesh } from './weapons/WeaponModels'
+import { ResourceCache } from './core/ResourceCache'
 
 export class Player {
   private mesh: THREE.Group
@@ -57,11 +58,25 @@ export class Player {
   }
 
   private createCharacterModel() {
+    const cache = ResourceCache.getInstance()
+    const playerModel = cache.getModel('player')
+    
+    if (playerModel) {
+      const box = new THREE.Box3().setFromObject(playerModel)
+      const size = box.getSize(new THREE.Vector3())
+      const scale = 1.8 / size.y
+      playerModel.scale.setScalar(scale)
+      playerModel.position.y = -box.min.y * scale
+      this.mesh.add(playerModel)
+    }
+
+    const useGLTF = !playerModel
     const bodyGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1.2, 8)
     const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x4A90D9 })
     this.body = new THREE.Mesh(bodyGeometry, bodyMaterial)
     this.body.position.y = 1.2
     this.body.castShadow = true
+    this.body.visible = useGLTF
     this.mesh.add(this.body)
 
     const headGeometry = new THREE.SphereGeometry(0.25, 16, 16)
@@ -151,40 +166,52 @@ export class Player {
   private createKeyboard() {
     this.potGroup = new THREE.Group()
 
-    const baseGeometry = new THREE.BoxGeometry(0.5, 0.03, 0.2)
-    const baseMaterial = new THREE.MeshStandardMaterial({ color: 0x2A2A2A })
-    const base = new THREE.Mesh(baseGeometry, baseMaterial)
-    base.castShadow = true
-    this.potGroup.add(base)
+    const cache = ResourceCache.getInstance()
+    const keyboardModel = cache.getModel('keyboard')
+    
+    if (keyboardModel) {
+      const box = new THREE.Box3().setFromObject(keyboardModel)
+      const size = box.getSize(new THREE.Vector3())
+      const scale = 0.5 / size.x
+      keyboardModel.scale.setScalar(scale)
+      keyboardModel.position.y = -box.min.y * scale
+      this.potGroup.add(keyboardModel)
+    } else {
+      const baseGeometry = new THREE.BoxGeometry(0.5, 0.03, 0.2)
+      const baseMaterial = new THREE.MeshStandardMaterial({ color: 0x2A2A2A })
+      const base = new THREE.Mesh(baseGeometry, baseMaterial)
+      base.castShadow = true
+      this.potGroup.add(base)
 
-    const keyRows = 4
-    const keysPerRow = 12
-    const keyWidth = 0.035
-    const keyHeight = 0.035
-    const keyGap = 0.003
+      const keyRows = 4
+      const keysPerRow = 12
+      const keyWidth = 0.035
+      const keyHeight = 0.035
+      const keyGap = 0.003
 
-    for (let row = 0; row < keyRows; row++) {
-      for (let col = 0; col < keysPerRow; col++) {
-        const keyGeometry = new THREE.BoxGeometry(keyWidth, 0.015, keyHeight)
-        const isSpecial = row === 3 && (col === 0 || col === 11)
-        const keyMaterial = new THREE.MeshStandardMaterial({ 
-          color: isSpecial ? 0x666666 : 0x444444 
-        })
-        const key = new THREE.Mesh(keyGeometry, keyMaterial)
-        
-        const x = -0.2 + col * (keyWidth + keyGap) + keyWidth / 2
-        const z = -0.07 + row * (keyHeight + keyGap) + keyHeight / 2
-        
-        key.position.set(x, 0.02, z)
-        this.potGroup.add(key)
+      for (let row = 0; row < keyRows; row++) {
+        for (let col = 0; col < keysPerRow; col++) {
+          const keyGeometry = new THREE.BoxGeometry(keyWidth, 0.015, keyHeight)
+          const isSpecial = row === 3 && (col === 0 || col === 11)
+          const keyMaterial = new THREE.MeshStandardMaterial({ 
+            color: isSpecial ? 0x666666 : 0x444444 
+          })
+          const key = new THREE.Mesh(keyGeometry, keyMaterial)
+          
+          const x = -0.2 + col * (keyWidth + keyGap) + keyWidth / 2
+          const z = -0.07 + row * (keyHeight + keyGap) + keyHeight / 2
+          
+          key.position.set(x, 0.02, z)
+          this.potGroup.add(key)
+        }
       }
-    }
 
-    const spaceKeyGeometry = new THREE.BoxGeometry(0.25, 0.015, 0.035)
-    const spaceKeyMaterial = new THREE.MeshStandardMaterial({ color: 0x444444 })
-    const spaceKey = new THREE.Mesh(spaceKeyGeometry, spaceKeyMaterial)
-    spaceKey.position.set(0, 0.02, 0.1)
-    this.potGroup.add(spaceKey)
+      const spaceKeyGeometry = new THREE.BoxGeometry(0.25, 0.015, 0.035)
+      const spaceKeyMaterial = new THREE.MeshStandardMaterial({ color: 0x444444 })
+      const spaceKey = new THREE.Mesh(spaceKeyGeometry, spaceKeyMaterial)
+      spaceKey.position.set(0, 0.02, 0.1)
+      this.potGroup.add(spaceKey)
+    }
 
     this.potGroup.position.set(-0.55, 1.0, 0.3)
     this.potGroup.rotation.x = -Math.PI / 6

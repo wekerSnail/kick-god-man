@@ -6,6 +6,7 @@ import { Props } from './Props'
 import { HidingSpots } from './HidingSpots'
 import { EventBus } from './core/EventBus'
 import { InputManager } from './core/InputManager'
+import { ResourceCache } from './core/ResourceCache'
 import { CollisionSystem } from './systems/CollisionSystem'
 import { LevelManager } from './systems/LevelManager'
 import { AudioManager } from './systems/AudioManager'
@@ -22,6 +23,7 @@ export class GameLoop {
   private levelManager: LevelManager
   private audio: AudioManager
   private projectileSystem: ProjectileSystem
+  private resourceCache: ResourceCache
   private clock: THREE.Clock
   private isRunning: boolean = false
   private kickCount: number = 0
@@ -46,19 +48,12 @@ export class GameLoop {
     this.onStateChange = onStateChange
     this.events = new EventBus()
     this.input = new InputManager()
+    this.resourceCache = ResourceCache.getInstance()
     this.sceneManager = new SceneManager(container)
-    this.player = new Player(this.sceneManager.getScene(), this.input)
-    this.enemy = new Enemy(this.sceneManager.getScene())
-    this.props = new Props(this.sceneManager.getScene())
-    this.hidingSpots = new HidingSpots(this.sceneManager.getScene())
-    this.collisionSystem = new CollisionSystem(this.player, this.enemy, this.hidingSpots, this.props)
     this.levelManager = new LevelManager(this.events)
     this.audio = new AudioManager()
     this.projectileSystem = new ProjectileSystem(this.sceneManager.getScene())
     this.clock = new THREE.Clock()
-
-    this.clickHandler = () => this.player.kick()
-    document.addEventListener('click', this.clickHandler)
 
     this.sceneManager.getCamera().position.set(0, 10, 15)
     this.sceneManager.getCamera().lookAt(0, 0, 0)
@@ -74,6 +69,17 @@ export class GameLoop {
       category: 'weapon',
       count: 1
     })
+  }
+
+  async init(): Promise<void> {
+    await this.resourceCache.preloadModels()
+    this.player = new Player(this.sceneManager.getScene(), this.input)
+    this.enemy = new Enemy(this.sceneManager.getScene())
+    this.props = new Props(this.sceneManager.getScene())
+    this.hidingSpots = new HidingSpots(this.sceneManager.getScene())
+    this.collisionSystem = new CollisionSystem(this.player, this.enemy, this.hidingSpots, this.props)
+    this.clickHandler = () => this.player.kick()
+    document.addEventListener('click', this.clickHandler)
   }
 
   start() {

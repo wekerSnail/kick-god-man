@@ -34,6 +34,8 @@ export class SceneManager {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     this.renderer.shadowMap.enabled = true
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping
+    this.renderer.toneMappingExposure = 1.2
     this.renderer.domElement.style.display = 'block'
     this.renderer.domElement.style.width = '100%'
     this.renderer.domElement.style.height = '100%'
@@ -48,10 +50,10 @@ export class SceneManager {
   }
 
   private setupLights(shadowSize: number) {
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5)
+    const ambientLight = new THREE.AmbientLight(0xfffaed, 0.6)
     this.scene.add(ambientLight)
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8)
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0)
     directionalLight.position.set(10, 20, 10)
     directionalLight.castShadow = true
     directionalLight.shadow.mapSize.width = shadowSize
@@ -62,6 +64,7 @@ export class SceneManager {
     directionalLight.shadow.camera.right = 20
     directionalLight.shadow.camera.top = 20
     directionalLight.shadow.camera.bottom = -20
+    directionalLight.shadow.bias = -0.0005
     this.scene.add(directionalLight)
 
     const pointLight = new THREE.PointLight(0xffffff, 0.3, 50)

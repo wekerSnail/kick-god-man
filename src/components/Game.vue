@@ -159,7 +159,7 @@ const gameState = ref({
   isPatrolWarning: false
 })
 
-const startGame = () => {
+const startGame = async () => {
   gameStarted.value = true
   if (gameContainer.value) {
     gameLoop = new GameLoop(gameContainer.value, (state) => {
@@ -176,6 +176,7 @@ const startGame = () => {
       
       gameState.value.lastKickCount = state.kickCount
     })
+    await gameLoop.init()
     gameLoop.start()
   }
 }
@@ -226,7 +227,7 @@ const restartGame = () => {
     isPatrolWarning: false
   }
   gameStarted.value = false
-  setTimeout(() => {
+  setTimeout(async () => {
     if (gameContainer.value) {
       gameLoop = new GameLoop(gameContainer.value, (state) => {
         const prevState = gameState.value
@@ -242,6 +243,7 @@ const restartGame = () => {
         
         gameState.value.lastKickCount = state.kickCount
       })
+      await gameLoop.init()
       gameLoop.start()
       gameStarted.value = true
     }

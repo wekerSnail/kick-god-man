@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import type { HidingSpot } from '../types/game'
 import { HIDING_SPOTS } from '../types/game'
+import { ResourceCache } from './core/ResourceCache'
 
 export class HidingSpots {
   private scene: THREE.Scene
@@ -36,6 +37,18 @@ export class HidingSpots {
   }
 
   private createPlant(): THREE.Group {
+    const cache = ResourceCache.getInstance()
+    const plantModel = cache.getModel('plant')
+    
+    if (plantModel) {
+      const box = new THREE.Box3().setFromObject(plantModel)
+      const size = box.getSize(new THREE.Vector3())
+      const scale = 2.0 / size.y
+      plantModel.scale.setScalar(scale)
+      plantModel.position.y = -box.min.y * scale
+      return plantModel
+    }
+
     const group = new THREE.Group()
 
     const potGeometry = new THREE.CylinderGeometry(0.4, 0.3, 0.6, 8)
@@ -73,6 +86,18 @@ export class HidingSpots {
   }
 
   private createCabinet(): THREE.Group {
+    const cache = ResourceCache.getInstance()
+    const cabinetModel = cache.getModel('cabinet')
+    
+    if (cabinetModel) {
+      const box = new THREE.Box3().setFromObject(cabinetModel)
+      const size = box.getSize(new THREE.Vector3())
+      const scale = 2.5 / size.y
+      cabinetModel.scale.setScalar(scale)
+      cabinetModel.position.y = -box.min.y * scale
+      return cabinetModel
+    }
+
     const group = new THREE.Group()
 
     const bodyGeometry = new THREE.BoxGeometry(2, 2.5, 0.8)
@@ -102,6 +127,18 @@ export class HidingSpots {
   }
 
   private createSofa(): THREE.Group {
+    const cache = ResourceCache.getInstance()
+    const sofaModel = cache.getModel('sofa')
+    
+    if (sofaModel) {
+      const box = new THREE.Box3().setFromObject(sofaModel)
+      const size = box.getSize(new THREE.Vector3())
+      const scale = 1.2 / size.y
+      sofaModel.scale.setScalar(scale)
+      sofaModel.position.y = -box.min.y * scale
+      return sofaModel
+    }
+
     const group = new THREE.Group()
 
     const seatGeometry = new THREE.BoxGeometry(3, 0.5, 1.2)

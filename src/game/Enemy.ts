@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { ResourceCache } from './core/ResourceCache'
 
 export class Enemy {
   private mesh: THREE.Group
@@ -78,11 +79,25 @@ export class Enemy {
   }
 
   private createCharacterModel() {
+    const cache = ResourceCache.getInstance()
+    const bossModel = cache.getModel('boss')
+    
+    if (bossModel) {
+      const box = new THREE.Box3().setFromObject(bossModel)
+      const size = box.getSize(new THREE.Vector3())
+      const scale = 1.8 / size.y
+      bossModel.scale.setScalar(scale)
+      bossModel.position.y = -box.min.y * scale
+      this.characterGroup.add(bossModel)
+    }
+
+    const useGLTF = !bossModel
     const bodyGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1.2, 8)
     const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xFF6B6B })
     this.body = new THREE.Mesh(bodyGeometry, bodyMaterial)
     this.body.position.y = 1.2
     this.body.castShadow = true
+    this.body.visible = useGLTF
     this.characterGroup.add(this.body)
 
     const headGeometry = new THREE.SphereGeometry(0.25, 16, 16)
@@ -90,6 +105,7 @@ export class Enemy {
     this.head = new THREE.Mesh(headGeometry, headMaterial)
     this.head.position.y = 2.0
     this.head.castShadow = true
+    this.head.visible = useGLTF
     this.characterGroup.add(this.head)
 
     const eyeGeometry = new THREE.SphereGeometry(0.04, 8, 8)
@@ -159,6 +175,19 @@ export class Enemy {
   }
 
   private createChair() {
+    const cache = ResourceCache.getInstance()
+    const chairModel = cache.getModel('chair')
+    
+    if (chairModel) {
+      const box = new THREE.Box3().setFromObject(chairModel)
+      const size = box.getSize(new THREE.Vector3())
+      const scale = 0.5 / size.x
+      chairModel.scale.setScalar(scale)
+      chairModel.position.set(0, -box.min.y * scale, 0.6)
+      this.mesh.add(chairModel)
+      return
+    }
+
     const seatGeometry = new THREE.BoxGeometry(0.5, 0.06, 0.5)
     const chairMaterial = new THREE.MeshStandardMaterial({ color: 0x4A4A4A })
     const seat = new THREE.Mesh(seatGeometry, chairMaterial)
@@ -204,6 +233,21 @@ export class Enemy {
   }
 
   private createDesk() {
+    const cache = ResourceCache.getInstance()
+    const deskModel = cache.getModel('desk')
+    
+    if (deskModel) {
+      const box = new THREE.Box3().setFromObject(deskModel)
+      const size = box.getSize(new THREE.Vector3())
+      const scaleX = 2.5 / size.x
+      const scaleZ = 1.0 / size.z
+      const scale = Math.min(scaleX, scaleZ)
+      deskModel.scale.setScalar(scale)
+      deskModel.position.set(0, -box.min.y * scale, -0.5)
+      this.mesh.add(deskModel)
+      return
+    }
+
     const deskTopGeometry = new THREE.BoxGeometry(2.5, 0.12, 1.0)
     const deskMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 })
     const deskTop = new THREE.Mesh(deskTopGeometry, deskMaterial)
@@ -231,6 +275,19 @@ export class Enemy {
   }
 
   private createComputer() {
+    const cache = ResourceCache.getInstance()
+    const computerModel = cache.getModel('computer')
+    
+    if (computerModel) {
+      const box = new THREE.Box3().setFromObject(computerModel)
+      const size = box.getSize(new THREE.Vector3())
+      const scale = 0.8 / size.x
+      computerModel.scale.setScalar(scale)
+      computerModel.position.set(0, 0.75, -0.7)
+      this.mesh.add(computerModel)
+      return
+    }
+
     const monitorGeometry = new THREE.BoxGeometry(0.8, 0.6, 0.04)
     const monitorMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 })
     const monitor = new THREE.Mesh(monitorGeometry, monitorMaterial)
