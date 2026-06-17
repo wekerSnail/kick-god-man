@@ -3,7 +3,7 @@ import * as THREE from 'three'
 export class Enemy {
   private mesh: THREE.Group
   private position: THREE.Vector3
-  private state: 'normal' | 'phone_flashing' | 'looking_back' | 'stunned' | 'meeting' = 'normal'
+  private state: 'normal' | 'phone_flashing' | 'looking_back' | 'stunned' | 'meeting' | 'patrolling' = 'normal'
   private phoneFlashTimer: number = 0
   private nextLookBackTime: number = 8
   private phoneMesh: THREE.Mesh
@@ -34,10 +34,33 @@ export class Enemy {
   private armRight: THREE.Mesh
   private nextMeetingTime: number = 15
 
+  private isPatrolling: boolean = false
+  private patrolTimer: number = 0
+  private nextPatrolTime: number = 25
+  private patrolPhase: 'idle' | 'patrol_warning' | 'patrol_standup' | 'patrol_walk' | 'patrol_return' | 'patrol_sitdown' = 'idle'
+  private patrolPhaseTimer: number = 0
+  private patrolWaypoints: THREE.Vector3[] = []
+  private currentWaypointIndex: number = 0
+  private patrolMoveSpeed: number = 3.5
+  private readonly PATROL_DETECTION_RANGE: number = 5
+  private readonly PATROL_DETECTION_HALF_ANGLE: number = THREE.MathUtils.degToRad(25)
+  private readonly WARNING_DURATION: number = 2.5
+  private readonly PATROL_STAND_UP_DURATION: number = 0.6
+  private readonly PATROL_SIT_DOWN_DURATION: number = 0.6
+
+  private patrolWarningSprite!: THREE.Sprite
+  private patrolTextSprite!: THREE.Sprite
+  private patrolVisionCone!: THREE.Mesh
+  private originalPosition!: THREE.Vector3
+  private characterGroup!: THREE.Group
+
   constructor(scene: THREE.Scene) {
     this.position = new THREE.Vector3(0, 0, -10)
+    this.originalPosition = this.position.clone()
     this.mesh = new THREE.Group()
     this.mesh.position.copy(this.position)
+    this.characterGroup = new THREE.Group()
+    this.mesh.add(this.characterGroup)
     
     this.createDesk()
     this.createComputer()
@@ -47,6 +70,7 @@ export class Enemy {
     this.createWarningIndicator()
     this.createStunIndicator()
     this.createMeetingIndicator()
+    this.createPatrolIndicator()
     
     scene.add(this.mesh)
 
@@ -59,14 +83,14 @@ export class Enemy {
     this.body = new THREE.Mesh(bodyGeometry, bodyMaterial)
     this.body.position.y = 1.2
     this.body.castShadow = true
-    this.mesh.add(this.body)
+    this.characterGroup.add(this.body)
 
     const headGeometry = new THREE.SphereGeometry(0.25, 16, 16)
     const headMaterial = new THREE.MeshStandardMaterial({ color: 0xFFD5B8 })
     this.head = new THREE.Mesh(headGeometry, headMaterial)
     this.head.position.y = 2.0
     this.head.castShadow = true
-    this.mesh.add(this.head)
+    this.characterGroup.add(this.head)
 
     const eyeGeometry = new THREE.SphereGeometry(0.04, 8, 8)
     const eyeMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 })
@@ -125,13 +149,13 @@ export class Enemy {
     this.armLeft.position.set(-0.4, 1.3, -0.15)
     this.armLeft.rotation.x = Math.PI / 3
     this.armLeft.castShadow = true
-    this.mesh.add(this.armLeft)
+    this.characterGroup.add(this.armLeft)
 
     this.armRight = new THREE.Mesh(armGeometry, armMaterial)
     this.armRight.position.set(0.4, 1.3, -0.15)
     this.armRight.rotation.x = Math.PI / 3
     this.armRight.castShadow = true
-    this.mesh.add(this.armRight)
+    this.characterGroup.add(this.armRight)
   }
 
   private createChair() {
@@ -281,7 +305,7 @@ export class Enemy {
     this.questionMark.visible = false
     this.warningIndicator.add(this.questionMark)
 
-    this.mesh.add(this.warningIndicator)
+    this.characterGroup.add(this.warningIndicator)
   }
 
   private createStunIndicator() {
@@ -300,7 +324,7 @@ export class Enemy {
       )
       this.stunIndicator.add(star)
     }
-    this.mesh.add(this.stunIndicator)
+    this.characterGroup.add(this.stunIndicator)
   }
 
   private createMeetingIndicator() {
@@ -333,6 +357,54 @@ export class Enemy {
     this.mesh.add(this.meetingTextSprite)
   }
 
+  private createPatrolIndicator() {
+    const warningCanvas = document.createElement('canvas')
+    warningCanvas.width = 256
+    warningCanvas.height = 64
+    const warningCtx = warningCanvas.getContext('2d')!
+    warningCtx.fillStyle = '#FFD700'
+    warningCtx.font = 'bold 32px sans-serif'
+    warningCtx.textAlign = 'center'
+    warningCtx.fillText('🔍 即将巡查...', 128, 44)
+    const warningTexture = new THREE.CanvasTexture(warningCanvas)
+    const warningMat = new THREE.SpriteMaterial({ map: warningTexture, transparent: true })
+    this.patrolWarningSprite = new THREE.Sprite(warningMat)
+    this.patrolWarningSprite.position.set(0, 3.5, 0)
+    this.patrolWarningSprite.scale.set(2, 0.5, 1)
+    this.patrolWarningSprite.visible = false
+    this.characterGroup.add(this.patrolWarningSprite)
+
+    const textCanvas = document.createElement('canvas')
+    textCanvas.width = 256
+    textCanvas.height = 64
+    const textCtx = textCanvas.getContext('2d')!
+    textCtx.fillStyle = '#FFD700'
+    textCtx.font = 'bold 32px sans-serif'
+    textCtx.textAlign = 'center'
+    textCtx.fillText('🔍 巡查中...', 128, 44)
+    const textTexture = new THREE.CanvasTexture(textCanvas)
+    const textMat = new THREE.SpriteMaterial({ map: textTexture, transparent: true })
+    this.patrolTextSprite = new THREE.Sprite(textMat)
+    this.patrolTextSprite.position.set(0, 3.5, 0)
+    this.patrolTextSprite.scale.set(2, 0.5, 1)
+    this.patrolTextSprite.visible = false
+    this.characterGroup.add(this.patrolTextSprite)
+
+    const coneGeom = new THREE.ConeGeometry(5, 5, 16, 1, true, 0, Math.PI / 4)
+    const coneMat = new THREE.MeshBasicMaterial({
+      color: 0xFFD700,
+      transparent: true,
+      opacity: 0.15,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    })
+    this.patrolVisionCone = new THREE.Mesh(coneGeom, coneMat)
+    this.patrolVisionCone.rotation.x = Math.PI / 2
+    this.patrolVisionCone.position.y = 0.5
+    this.patrolVisionCone.visible = false
+    this.characterGroup.add(this.patrolVisionCone)
+  }
+
   private scheduleNextLookBack() {
     const difficulty = this.getDifficulty()
     const minInterval = Math.max(3, 8 - difficulty)
@@ -352,6 +424,12 @@ export class Enemy {
 
     if (this.isMeeting) {
       this.updateMeeting(delta)
+      return
+    }
+
+    if (this.isPatrolling) {
+      this.updatePatrol(delta, playerPosition)
+      this.animateCharacter(delta)
       return
     }
 
@@ -398,6 +476,167 @@ export class Enemy {
       }
       this.nextMeetingTime = 12 + Math.random() * 8
     }
+
+    this.nextPatrolTime -= delta
+    if (this.nextPatrolTime <= 0) {
+      if (Math.random() < 0.6) {
+        this.startPatrol()
+      }
+      this.nextPatrolTime = 20 + Math.random() * 15
+    }
+  }
+
+  startPatrol(): void {
+    if (this.isMeeting || this.isStunned) return
+    this.isPatrolling = true
+    this.state = 'patrolling'
+    this.patrolPhase = 'patrol_warning'
+    this.patrolPhaseTimer = 0
+    this.patrolTimer = 8 + Math.random() * 4
+    this.generatePatrolWaypoints()
+    this.currentWaypointIndex = 0
+    this.patrolWarningSprite.visible = true
+    this.patrolTextSprite.visible = false
+    this.patrolVisionCone.visible = true
+    this.warningIndicator.visible = false
+  }
+
+  private updatePatrol(delta: number, playerPosition: THREE.Vector3): void {
+    this.patrolPhaseTimer += delta
+
+    switch (this.patrolPhase) {
+      case 'patrol_warning':
+        this.patrolWarningSprite.visible = true
+        this.patrolTextSprite.visible = false
+        const toPlayer = playerPosition.clone().sub(this.position).setY(0)
+        const targetAngle = Math.atan2(toPlayer.x, toPlayer.z)
+        this.head.rotation.y = THREE.MathUtils.lerp(this.head.rotation.y, targetAngle, 0.02)
+        this.body.rotation.y = THREE.MathUtils.lerp(this.body.rotation.y, targetAngle, 0.01)
+        this.phoneLight.intensity = Math.sin(Date.now() * 0.01) > 0 ? 2 : 0
+        if (this.patrolPhaseTimer >= this.WARNING_DURATION) {
+          this.patrolPhase = 'patrol_standup'
+          this.patrolPhaseTimer = 0
+          this.patrolWarningSprite.visible = false
+          this.patrolTextSprite.visible = true
+          this.phoneLight.intensity = 0
+        }
+        break
+
+      case 'patrol_standup':
+        this.patrolTextSprite.visible = true
+        if (this.patrolPhaseTimer >= this.PATROL_STAND_UP_DURATION) {
+          this.patrolPhase = 'patrol_walk'
+          this.patrolPhaseTimer = 0
+        }
+        break
+
+      case 'patrol_walk':
+        this.patrolTextSprite.visible = true
+        this.patrolTimer -= delta
+        if (this.currentWaypointIndex < this.patrolWaypoints.length) {
+          const target = this.patrolWaypoints[this.currentWaypointIndex]
+          const dir = target.clone().sub(this.position).setY(0)
+          const distance = dir.length()
+          if (distance < 0.5) {
+            this.currentWaypointIndex++
+          } else {
+            const step = dir.normalize().multiplyScalar(this.patrolMoveSpeed * delta)
+            this.position.add(step)
+            this.characterGroup.position.copy(this.position).sub(this.originalPosition)
+            this.body.rotation.y = Math.atan2(dir.x, dir.z)
+          }
+        }
+        if (this.currentWaypointIndex >= this.patrolWaypoints.length || this.patrolTimer <= 0) {
+          this.patrolPhase = 'patrol_return'
+          this.patrolPhaseTimer = 0
+        }
+        break
+
+      case 'patrol_return':
+        this.patrolTextSprite.visible = true
+        const returnDir = this.originalPosition.clone().sub(this.position).setY(0)
+        const returnDist = returnDir.length()
+        if (returnDist < 0.5) {
+          this.position.copy(this.originalPosition)
+          this.characterGroup.position.set(0, 0, 0)
+          this.patrolPhase = 'patrol_sitdown'
+          this.patrolPhaseTimer = 0
+        } else {
+          const returnStep = returnDir.normalize().multiplyScalar(this.patrolMoveSpeed * delta)
+          this.position.add(returnStep)
+          this.characterGroup.position.copy(this.position).sub(this.originalPosition)
+          this.body.rotation.y = Math.atan2(returnDir.x, returnDir.z)
+        }
+        break
+
+      case 'patrol_sitdown':
+        this.patrolTextSprite.visible = false
+        if (this.patrolPhaseTimer >= this.PATROL_SIT_DOWN_DURATION) {
+          this.isPatrolling = false
+          this.state = 'normal'
+          this.patrolPhase = 'idle'
+          this.patrolVisionCone.visible = false
+          this.characterGroup.position.set(0, 0, 0)
+          this.body.rotation.y = 0
+          this.head.rotation.y = 0
+          this.scheduleNextLookBack()
+        }
+        break
+    }
+  }
+
+  private generatePatrolWaypoints(): void {
+    const candidatePoints = [
+      new THREE.Vector3(-8, 0, -8),
+      new THREE.Vector3(8, 0, -8),
+      new THREE.Vector3(-8, 0, 8),
+      new THREE.Vector3(8, 0, 8),
+      new THREE.Vector3(0, 0, 5),
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(-5, 0, -5),
+      new THREE.Vector3(5, 0, -5),
+      new THREE.Vector3(-5, 0, 3),
+      new THREE.Vector3(5, 0, 3),
+      new THREE.Vector3(0, 0, -5),
+      new THREE.Vector3(-3, 0, 8),
+    ]
+
+    const count = 2 + Math.floor(Math.random() * 3)
+    const shuffled = candidatePoints.sort(() => Math.random() - 0.5)
+    this.patrolWaypoints = []
+    for (const point of shuffled) {
+      if (this.patrolWaypoints.length >= count) break
+      const tooClose = this.patrolWaypoints.some(wp => wp.distanceTo(point) < 3)
+      if (!tooClose) {
+        this.patrolWaypoints.push(point.clone())
+      }
+    }
+    while (this.patrolWaypoints.length < count && shuffled.length > 0) {
+      this.patrolWaypoints.push(shuffled.pop()!.clone())
+    }
+  }
+
+  detectPlayerInVision(playerPos: THREE.Vector3): boolean {
+    const toPlayer = playerPos.clone().sub(this.position).setY(0)
+    const distance = toPlayer.length()
+    if (distance > this.PATROL_DETECTION_RANGE) return false
+    const facingDir = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.body.rotation.y)
+    const angle = toPlayer.normalize().angleTo(facingDir)
+    return angle < this.PATROL_DETECTION_HALF_ANGLE
+  }
+
+  isPlayerBehind(playerPos: THREE.Vector3): boolean {
+    const toPlayer = playerPos.clone().sub(this.position).setY(0)
+    const facingDir = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.body.rotation.y)
+    return toPlayer.normalize().dot(facingDir) < 0
+  }
+
+  getIsPatrolling(): boolean {
+    return this.isPatrolling
+  }
+
+  isPatrolWarning(): boolean {
+    return this.isPatrolling && this.patrolPhase === 'patrol_warning'
   }
 
   private updatePhoneFlashing(delta: number) {
@@ -477,8 +716,42 @@ export class Enemy {
   private animateCharacter(_delta: number) {
     const sittingY = 0.8
     const standingY = 0.8
+    const patrolStandingY = 1.8
     const headOffset = 0.8
-    
+
+    if (this.isPatrolling) {
+      switch (this.patrolPhase) {
+        case 'patrol_warning':
+          this.body.position.y = sittingY
+          this.head.position.y = sittingY + headOffset
+          this.body.rotation.x = Math.sin(Date.now() * 0.002) * 0.02
+          break
+        case 'patrol_standup': {
+          const progress = Math.min(1, this.patrolPhaseTimer / this.PATROL_STAND_UP_DURATION)
+          const eased = this.easeOutCubic(progress)
+          this.body.position.y = sittingY + (patrolStandingY - sittingY) * eased
+          this.head.position.y = this.body.position.y + headOffset
+          this.body.rotation.x = 0
+          break
+        }
+        case 'patrol_walk':
+        case 'patrol_return':
+          this.body.position.y = patrolStandingY
+          this.head.position.y = patrolStandingY + headOffset
+          this.body.rotation.x = 0
+          break
+        case 'patrol_sitdown': {
+          const progress = Math.min(1, this.patrolPhaseTimer / this.PATROL_SIT_DOWN_DURATION)
+          const eased = this.easeOutCubic(progress)
+          this.body.position.y = patrolStandingY - (patrolStandingY - sittingY) * eased
+          this.head.position.y = this.body.position.y + headOffset
+          this.body.rotation.x = 0
+          break
+        }
+      }
+      return
+    }
+
     switch (this.animationState) {
       case 'sitting':
         this.body.position.y = sittingY
@@ -614,6 +887,7 @@ export class Enemy {
   }
 
   startMeeting(duration: number): void {
+    if (this.isPatrolling) return
     this.isMeeting = true
     this.meetingTimer = duration
     this.state = 'meeting'
@@ -636,6 +910,11 @@ export class Enemy {
         const mat = child.material
         if (Array.isArray(mat)) mat.forEach(m => m.dispose())
         else if (mat) mat.dispose()
+      }
+      if (child instanceof THREE.Sprite) {
+        const mat = child.material as THREE.SpriteMaterial
+        mat.map?.dispose()
+        mat.dispose()
       }
     })
     this.mesh.parent?.remove(this.mesh)

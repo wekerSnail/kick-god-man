@@ -12,6 +12,15 @@ export class CollisionSystem {
   ) {}
 
   checkEnemyDetection(): boolean {
+    if (this.enemy.getIsPatrolling()) {
+      if (this.player.isInvisible()) return false
+      const isHidden = this.hidingSpots.isInHidingSpot(this.player.getPosition())
+      if (isHidden) return false
+      const hasPot = this.player.getPotActive()
+      if (hasPot && Math.random() < 0.5) return false
+      return this.enemy.detectPlayerInVision(this.player.getPosition())
+    }
+
     if (!this.enemy.isActuallyLooking()) return false
 
     const isHidden = this.hidingSpots.isInHidingSpot(this.player.getPosition())

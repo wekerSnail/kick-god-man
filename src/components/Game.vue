@@ -21,6 +21,7 @@
     <div ref="gameContainer" class="game-canvas-container"></div>
 
     <div v-if="gameState.enemyState === 'meeting'" class="meeting-warning-border"></div>
+    <div v-if="gameState.isPatrolWarning" class="patrol-warning-border"></div>
 
     <div class="inventory">
       <div class="inventory-label">
@@ -71,6 +72,7 @@
         <span v-else-if="gameState.enemyState === 'looking_back'" class="enemy-looking">👀 回头检查</span>
         <span v-else-if="gameState.enemyState === 'stunned'" class="enemy-stunned">💫 眩晕中</span>
         <span v-else-if="gameState.enemyState === 'meeting'" class="enemy-meeting">📢 开会中! 攻击无效</span>
+        <span v-else-if="gameState.enemyState === 'patrolling'" class="enemy-patrol">🔍 巡查中！快躲好！</span>
       </div>
       <div class="hidden-status" v-if="gameState.isHidden">
         <span class="hidden-label">🛡️ 躲藏中</span>
@@ -153,7 +155,8 @@ const gameState = ref({
   isChargingThrow: false,
   attackCooldown: 0,
   comboActive: false,
-  invisibleActive: false
+  invisibleActive: false,
+  isPatrolWarning: false
 })
 
 const startGame = () => {
@@ -219,7 +222,8 @@ const restartGame = () => {
     isChargingThrow: false,
     attackCooldown: 0,
     comboActive: false,
-    invisibleActive: false
+    invisibleActive: false,
+    isPatrolWarning: false
   }
   gameStarted.value = false
   setTimeout(() => {
@@ -618,6 +622,31 @@ const handleResize = () => {
 @keyframes borderPulse {
   0%, 100% { border-color: rgba(255, 68, 68, 0.6); box-shadow: inset 0 0 30px rgba(255, 68, 68, 0.15); }
   50% { border-color: rgba(255, 68, 68, 0.2); box-shadow: inset 0 0 60px rgba(255, 68, 68, 0.08); }
+}
+
+.patrol-warning-border {
+  position: absolute;
+  inset: 0;
+  border: 4px solid rgba(255, 215, 0, 0.6);
+  pointer-events: none;
+  z-index: 40;
+  animation: borderPulseYellow 1s infinite;
+}
+
+@keyframes borderPulseYellow {
+  0%, 100% { border-color: rgba(255, 215, 0, 0.6); box-shadow: inset 0 0 30px rgba(255, 215, 0, 0.15); }
+  50% { border-color: rgba(255, 215, 0, 0.2); box-shadow: inset 0 0 60px rgba(255, 215, 0, 0.08); }
+}
+
+.enemy-patrol {
+  color: #FFD700;
+  font-weight: bold;
+  animation: patrolPulse 0.8s infinite;
+}
+
+@keyframes patrolPulse {
+  0%, 100% { opacity: 1; text-shadow: 0 0 8px rgba(255, 215, 0, 0.6); }
+  50% { opacity: 0.7; text-shadow: 0 0 16px rgba(255, 215, 0, 0.9); }
 }
 
 .inventory-slot.weapon {

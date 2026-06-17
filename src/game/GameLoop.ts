@@ -39,6 +39,8 @@ export class GameLoop {
   private clickHandler: () => void
   private cameraTarget = new THREE.Vector3()
   private cameraOffset = new THREE.Vector3(0, 8, 6)
+  private patrolDamageCooldown: number = 0
+  private wasPatrolling: boolean = false
 
   constructor(container: HTMLElement, onStateChange: (state: any) => void) {
     this.onStateChange = onStateChange
@@ -116,28 +118,57 @@ export class GameLoop {
       this.player.getPotActive()
     )
 
+    if (this.wasPatrolling && !this.enemy.getIsPatrolling()) {
+      this.audio.play('patrol_end')
+    }
+    this.wasPatrolling = this.enemy.getIsPatrolling()
+
     const pickedProp = this.props.update(delta, this.player.getPosition())
     if (pickedProp && this.inventory.length < 3) {
       this.addProp(pickedProp)
     }
 
+    this.patrolDamageCooldown = Math.max(0, this.patrolDamageCooldown - delta)
+
     if (this.collisionSystem.checkEnemyDetection()) {
-      if (this.player.isInvisible()) {
-        // invisible: no damage
-      } else if (this.player.getPotActive()) {
-        // keyboard: half damage (50% chance to take hit)
-        if (Math.random() < 0.5) {
-          this.health -= 0.5
+      if (this.enemy.getIsPatrolling()) {
+        if (this.patrolDamageCooldown <= 0) {
+          this.patrolDamageCooldown = 1.0
+          if (this.player.isInvisible()) {
+            // invisible: no damage
+          } else if (this.player.getPotActive()) {
+            if (Math.random() < 0.5) {
+              this.health -= 0.5
+              this.audio.play('hit')
+              if (this.health <= 0) {
+                this.gameOver(false)
+              }
+            }
+          } else {
+            this.health--
+            this.audio.play('hit')
+            if (this.health <= 0) {
+              this.gameOver(false)
+            }
+          }
+        }
+      } else {
+        if (this.player.isInvisible()) {
+          // invisible: no damage
+        } else if (this.player.getPotActive()) {
+          if (Math.random() < 0.5) {
+            this.health -= 0.5
+            this.audio.play('hit')
+            if (this.health <= 0) {
+              this.gameOver(false)
+            }
+          }
+        } else {
+          this.health--
           this.audio.play('hit')
           if (this.health <= 0) {
             this.gameOver(false)
           }
-        }
-      } else {
-        this.health--
-        this.audio.play('hit')
-        if (this.health <= 0) {
-          this.gameOver(false)
         }
       }
     }
@@ -145,7 +176,42 @@ export class GameLoop {
     if ((this.player.getIsKicking() || this.player.getIsSwinging()) && !this.levelManager.getIsTransitioning()) {
       const distance = this.player.getPosition().distanceTo(this.enemy.getPosition())
 
-      if (this.enemy.isInMeeting()) {
+      if (this.enemy.getIsPatrolling()) {
+        if (this.player.getIsSwinging() && !this.kickCounted) {
+          const isBackstab = this.enemy.isPlayerBehind(this.player.getPosition())
+          if (!isBackstab) {
+            this.audio.play('blocked')
+            this.player.unequipWeapon()
+            this.kickCounted = true
+          } else {
+            const weapon = this.player.getEquippedWeapon()
+            if (weapon && distance < weapon.swingRange) {
+              this.kickCount += weapon.damage
+              this.score += 10
+              this.kickCounted = true
+              this.audio.play('hit')
+              if (weapon.stunDuration > 0) {
+                this.enemy.applyStun(weapon.stunDuration)
+              }
+              this.player.unequipWeapon()
+              this.levelManager.onKick(this.kickCount)
+            }
+          }
+        } else if (this.player.getIsKicking() && !this.kickCounted) {
+          const isBackstab = this.enemy.isPlayerBehind(this.player.getPosition())
+          if (!isBackstab) {
+            // front kick during patrol: no effect
+          } else if (distance < 2) {
+            this.kickCount++
+            this.score += 10
+            this.kickCounted = true
+            this.audio.play('kick')
+            if (this.levelManager.onKick(this.kickCount)) {
+              this.createVictoryParticles()
+            }
+          }
+        }
+      } else if (this.enemy.isInMeeting()) {
         if (this.player.getIsSwinging() && !this.kickCounted) {
           this.audio.play('blocked')
           this.player.unequipWeapon()
@@ -199,7 +265,7 @@ export class GameLoop {
     this.projectileSystem.update(delta)
     const hitProjectile = this.projectileSystem.checkHit(this.enemy.getPosition(), 1.5)
     if (hitProjectile && !this.kickCounted) {
-      if (this.enemy.isInMeeting()) {
+      if (this.enemy.isInMeeting() || this.enemy.getIsPatrolling()) {
         this.audio.play('blocked')
       } else {
         this.kickCount += hitProjectile.weapon.damage
@@ -244,7 +310,8 @@ export class GameLoop {
       isChargingThrow: this.player.isCharging(),
       attackCooldown: this.player.getAttackCooldown(),
       comboActive: this.player.isComboActive(),
-      invisibleActive: this.player.isInvisible()
+      invisibleActive: this.player.isInvisible(),
+      isPatrolWarning: this.enemy.isPatrolWarning()
     })
   }
 
