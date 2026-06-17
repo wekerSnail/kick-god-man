@@ -27,16 +27,16 @@ export class ProjectileSystem {
     mesh.position.copy(startPos).add(spawnOffset)
     this.scene.add(mesh)
 
-    const speed = 8 + power * 12
+    const speed = 4 + power * 6
     const velocity = direction.clone().multiplyScalar(speed)
-    velocity.y = 2 + power * 3
+    velocity.y = 1.5 + power * 2
 
     const projectile: Projectile = {
       mesh,
       position: mesh.position.clone(),
       velocity,
       weapon,
-      lifetime: 3,
+      lifetime: 2,
       age: 0,
       active: true
     }
