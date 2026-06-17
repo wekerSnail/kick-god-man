@@ -23,8 +23,9 @@ export class Player {
   private isMoving: boolean = false
   private walkCycle: number = 0
   private targetRotation: number = 0
-  private progressBar: THREE.Group
-  private progressFill: THREE.Mesh
+  private potCountdownSprite: THREE.Sprite
+  private potCountdownTexture: THREE.CanvasTexture
+  private potCountdownCtx: CanvasRenderingContext2D
   private equippedWeapon: WeaponConfig | null = null
   private weaponMesh: THREE.Group | null = null
   private isSwingingWeapon: boolean = false
@@ -187,26 +188,17 @@ export class Player {
   }
 
   private createProgressBar() {
-    this.progressBar = new THREE.Group()
-    this.progressBar.position.set(0, 2.8, 0)
-    this.progressBar.visible = false
-
-    const bgGeometry = new THREE.BoxGeometry(0.8, 0.1, 0.05)
-    const bgMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 })
-    const bg = new THREE.Mesh(bgGeometry, bgMaterial)
-    this.progressBar.add(bg)
-
-    const fillGeometry = new THREE.BoxGeometry(0.78, 0.08, 0.06)
-    const fillMaterial = new THREE.MeshStandardMaterial({ 
-      color: 0x4CAF50,
-      emissive: 0x4CAF50,
-      emissiveIntensity: 0.3
-    })
-    this.progressFill = new THREE.Mesh(fillGeometry, fillMaterial)
-    this.progressFill.position.z = 0.01
-    this.progressBar.add(this.progressFill)
-
-    this.mesh.add(this.progressBar)
+    const canvas = document.createElement('canvas')
+    canvas.width = 256
+    canvas.height = 64
+    this.potCountdownCtx = canvas.getContext('2d')!
+    this.potCountdownTexture = new THREE.CanvasTexture(canvas)
+    const spriteMat = new THREE.SpriteMaterial({ map: this.potCountdownTexture, transparent: true })
+    this.potCountdownSprite = new THREE.Sprite(spriteMat)
+    this.potCountdownSprite.position.set(0, 3.0, 0)
+    this.potCountdownSprite.scale.set(1.5, 0.4, 1)
+    this.potCountdownSprite.visible = false
+    this.mesh.add(this.potCountdownSprite)
 
     this.throwProgressBar = new THREE.Group()
     this.throwProgressBar.position.set(0, 3.0, 0)
@@ -228,6 +220,22 @@ export class Player {
     this.throwProgressBar.add(this.throwProgressFill)
 
     this.mesh.add(this.throwProgressBar)
+  }
+
+  private updatePotCountdown() {
+    if (!this.potActive) {
+      this.potCountdownSprite.visible = false
+      return
+    }
+    this.potCountdownSprite.visible = true
+    const time = Math.ceil(this.potStartTime)
+    const ctx = this.potCountdownCtx
+    ctx.clearRect(0, 0, 256, 64)
+    ctx.fillStyle = '#4CAF50'
+    ctx.font = 'bold 36px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText(`🛡️ ${time}s`, 128, 44)
+    this.potCountdownTexture.needsUpdate = true
   }
 
   private createCooldownHint() {
@@ -490,22 +498,7 @@ export class Player {
       this.potGroup.position.z += (targetZ - this.potGroup.position.z) * 0.2
       this.potGroup.rotation.x = -Math.PI / 2
       this.potGroup.rotation.z = 0
-
-      this.progressBar.visible = true
-      const progress = this.potStartTime / 5.0
-      this.progressFill.scale.x = Math.max(0.01, progress)
-      this.progressFill.position.x = -0.39 + 0.39 * progress
-      
-      if (progress > 0.5) {
-        (this.progressFill.material as THREE.MeshStandardMaterial).color.setHex(0x4CAF50)
-        ;(this.progressFill.material as THREE.MeshStandardMaterial).emissive.setHex(0x4CAF50)
-      } else if (progress > 0.25) {
-        (this.progressFill.material as THREE.MeshStandardMaterial).color.setHex(0xFFC107)
-        ;(this.progressFill.material as THREE.MeshStandardMaterial).emissive.setHex(0xFFC107)
-      } else {
-        (this.progressFill.material as THREE.MeshStandardMaterial).color.setHex(0xF44336)
-        ;(this.progressFill.material as THREE.MeshStandardMaterial).emissive.setHex(0xF44336)
-      }
+      this.updatePotCountdown()
     } else {
       const targetY = 1.0
       const targetZ = 0.3
@@ -513,7 +506,7 @@ export class Player {
       this.potGroup.position.z += (targetZ - this.potGroup.position.z) * 0.2
       this.potGroup.rotation.x = -Math.PI / 6
       this.potGroup.rotation.z = Math.PI / 8
-      this.progressBar.visible = false
+      this.potCountdownSprite.visible = false
     }
   }
 

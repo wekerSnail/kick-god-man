@@ -60,6 +60,17 @@ export class GameLoop {
 
     this.sceneManager.getCamera().position.set(0, 10, 15)
     this.sceneManager.getCamera().lookAt(0, 0, 0)
+
+    this.inventory.push({
+      id: 'starter-mace',
+      type: 'mace',
+      name: '狼牙棒',
+      icon: '🏏',
+      description: '击中造成眩晕3秒',
+      duration: 0,
+      active: false,
+      category: 'weapon'
+    })
   }
 
   start() {
