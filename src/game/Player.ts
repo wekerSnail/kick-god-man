@@ -30,6 +30,11 @@ export class Player {
   private isSwingingWeapon: boolean = false
   private swingTime: number = 0
   private swingCooldown: number = 0
+  private isChargingThrow: boolean = false
+  private throwChargeTime: number = 0
+  private throwChargeSpeed: number = 2.0
+  private throwProgressBar: THREE.Group
+  private throwProgressFill: THREE.Mesh
 
   constructor(scene: THREE.Scene, input: InputManager) {
     this.input = input
@@ -199,6 +204,27 @@ export class Player {
     this.progressBar.add(this.progressFill)
 
     this.mesh.add(this.progressBar)
+
+    this.throwProgressBar = new THREE.Group()
+    this.throwProgressBar.position.set(0, 3.0, 0)
+    this.throwProgressBar.visible = false
+
+    const throwBgGeom = new THREE.BoxGeometry(0.8, 0.08, 0.05)
+    const throwBgMat = new THREE.MeshStandardMaterial({ color: 0x333333 })
+    const throwBg = new THREE.Mesh(throwBgGeom, throwBgMat)
+    this.throwProgressBar.add(throwBg)
+
+    const throwFillGeom = new THREE.BoxGeometry(0.78, 0.06, 0.06)
+    const throwFillMat = new THREE.MeshStandardMaterial({ 
+      color: 0xFF9800,
+      emissive: 0xFF9800,
+      emissiveIntensity: 0.3
+    })
+    this.throwProgressFill = new THREE.Mesh(throwFillGeom, throwFillMat)
+    this.throwProgressFill.position.z = 0.01
+    this.throwProgressBar.add(this.throwProgressFill)
+
+    this.mesh.add(this.throwProgressBar)
   }
 
   kick() {
@@ -267,6 +293,65 @@ export class Player {
     return this.isSwingingWeapon
   }
 
+  canThrow(): boolean {
+    if (!this.equippedWeapon) return false
+    const type = this.equippedWeapon.type
+    return type === 'mace' || type === 'bat'
+  }
+
+  startThrowCharge(): void {
+    if (!this.canThrow() || this.isChargingThrow) return
+    this.isChargingThrow = true
+    this.throwChargeTime = 0
+  }
+
+  releaseThrow(): number {
+    if (!this.isChargingThrow) return 0
+    const power = (Math.sin(this.throwChargeTime * Math.PI * 2) + 1) / 2
+    this.isChargingThrow = false
+    this.throwChargeTime = 0
+    this.throwProgressBar.visible = false
+    return power
+  }
+
+  cancelThrow(): void {
+    this.isChargingThrow = false
+    this.throwChargeTime = 0
+    this.throwProgressBar.visible = false
+  }
+
+  isCharging(): boolean {
+    return this.isChargingThrow
+  }
+
+  private updateThrowCharge(delta: number): void {
+    if (this.isChargingThrow) {
+      this.throwChargeTime += delta * this.throwChargeSpeed
+      const power = (Math.sin(this.throwChargeTime * Math.PI * 2) + 1) / 2
+      this.throwProgressBar.visible = true
+      this.throwProgressFill.scale.x = Math.max(0.01, power)
+      this.throwProgressFill.position.x = -0.39 + 0.39 * power
+
+      const mat = this.throwProgressFill.material as THREE.MeshStandardMaterial
+      if (power > 0.7) {
+        mat.color.setHex(0xF44336)
+        mat.emissive.setHex(0xF44336)
+      } else if (power > 0.4) {
+        mat.color.setHex(0xFF9800)
+        mat.emissive.setHex(0xFF9800)
+      } else {
+        mat.color.setHex(0x4CAF50)
+        mat.emissive.setHex(0x4CAF50)
+      }
+    }
+  }
+
+  getThrowDirection(): THREE.Vector3 {
+    const dir = new THREE.Vector3(0, 0, -1)
+    dir.applyQuaternion(this.mesh.quaternion)
+    return dir.normalize()
+  }
+
   private usePot() {
     if (this.potCooldown > 0 || this.potActive) return
     
@@ -304,6 +389,7 @@ export class Player {
     this.updateWalkAnimation(delta)
     this.updateKeyboardPosition()
     this.updateWeaponSwing(delta)
+    this.updateThrowCharge(delta)
 
     if (this.input.isActionJustPressed('usePot')) {
       this.usePot()

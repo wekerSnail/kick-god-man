@@ -18,6 +18,7 @@ export interface UIState {
   isLevelTransition: boolean
   levelTransitionTimer: number
   equippedWeapon: WeaponConfig | null
+  isChargingThrow: boolean
 }
 
 export interface InventorySlot {

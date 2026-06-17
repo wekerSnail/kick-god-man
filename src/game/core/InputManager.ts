@@ -8,6 +8,7 @@ export type Action =
   | 'useProp1'
   | 'useProp2'
   | 'useProp3'
+  | 'throwWeapon'
 
 export class InputManager {
   private bindings = new Map<string, Action>()
@@ -53,6 +54,29 @@ export class InputManager {
     document.addEventListener('keyup', onUp)
     this.eventHandlers.push(['keydown', onDown as EventListener])
     this.eventHandlers.push(['keyup', onUp as EventListener])
+
+    const onContextMenu = (e: Event) => {
+      e.preventDefault()
+    }
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button === 2) {
+        e.preventDefault()
+        this.actionStates.set('throwWeapon', true)
+        this.actionJustPressed.set('throwWeapon', true)
+      }
+    }
+    const onMouseUp = (e: MouseEvent) => {
+      if (e.button === 2) {
+        this.actionStates.set('throwWeapon', false)
+      }
+    }
+
+    document.addEventListener('contextmenu', onContextMenu)
+    document.addEventListener('mousedown', onMouseDown)
+    document.addEventListener('mouseup', onMouseUp)
+    this.eventHandlers.push(['contextmenu', onContextMenu as EventListener])
+    this.eventHandlers.push(['mousedown', onMouseDown as EventListener])
+    this.eventHandlers.push(['mouseup', onMouseUp as EventListener])
   }
 
   isActionActive(action: Action): boolean {

@@ -9,6 +9,7 @@ import { InputManager } from './core/InputManager'
 import { CollisionSystem } from './systems/CollisionSystem'
 import { LevelManager } from './systems/LevelManager'
 import { AudioManager } from './systems/AudioManager'
+import { ProjectileSystem } from './systems/ProjectileSystem'
 import { WEAPON_CONFIGS } from '../types/game'
 
 export class GameLoop {
@@ -20,6 +21,7 @@ export class GameLoop {
   private collisionSystem: CollisionSystem
   private levelManager: LevelManager
   private audio: AudioManager
+  private projectileSystem: ProjectileSystem
   private clock: THREE.Clock
   private isRunning: boolean = false
   private kickCount: number = 0
@@ -50,6 +52,7 @@ export class GameLoop {
     this.collisionSystem = new CollisionSystem(this.player, this.enemy, this.hidingSpots, this.props)
     this.levelManager = new LevelManager(this.events)
     this.audio = new AudioManager()
+    this.projectileSystem = new ProjectileSystem(this.sceneManager.getScene())
     this.clock = new THREE.Clock()
 
     this.clickHandler = () => this.player.kick()
@@ -156,6 +159,38 @@ export class GameLoop {
       this.kickCounted = false
     }
 
+    if (this.input.isActionJustPressed('throwWeapon')) {
+      if (this.player.canThrow()) {
+        this.player.startThrowCharge()
+      }
+    }
+    if (!this.input.isActionActive('throwWeapon') && this.player.isCharging()) {
+      const power = this.player.releaseThrow()
+      if (power > 0) {
+        const weapon = this.player.getEquippedWeapon()!
+        const dir = this.player.getThrowDirection()
+        this.projectileSystem.spawn(this.player.getPosition(), dir, power, weapon)
+        this.player.unequipWeapon()
+      }
+    }
+
+    this.projectileSystem.update(delta)
+    const hitProjectile = this.projectileSystem.checkHit(this.enemy.getPosition(), 1.5)
+    if (hitProjectile && !this.kickCounted) {
+      if (this.enemy.isInMeeting()) {
+        this.audio.play('blocked')
+      } else {
+        this.kickCount += hitProjectile.weapon.damage
+        this.score += 10
+        this.kickCounted = true
+        this.audio.play('hit')
+        if (hitProjectile.weapon.stunDuration > 0) {
+          this.enemy.applyStun(hitProjectile.weapon.stunDuration)
+        }
+        this.levelManager.onKick(this.kickCount)
+      }
+    }
+
     if (this.levelManager.getIsTransitioning()) {
       this.updateParticles(delta)
       if (this.levelManager.update(delta)) {
@@ -183,7 +218,8 @@ export class GameLoop {
       kickTarget: this.levelManager.getKickTarget(),
       isLevelTransition: this.levelManager.getIsTransitioning(),
       levelTransitionTimer: this.levelManager.getTransitionTimer(),
-      equippedWeapon: this.player.getEquippedWeapon()
+      equippedWeapon: this.player.getEquippedWeapon(),
+      isChargingThrow: this.player.isCharging()
     })
   }
 
@@ -285,6 +321,7 @@ export class GameLoop {
     this.input.dispose()
     this.events.clear()
     this.audio.dispose()
+    this.projectileSystem.dispose()
   }
 
   getKickCount(): number {

@@ -23,7 +23,13 @@
     <div v-if="gameState.enemyState === 'meeting'" class="meeting-warning-border"></div>
 
     <div class="inventory">
-      <div class="inventory-label">道具栏 (按 1/2/3 使用) | {{ gameState.equippedWeapon ? '装备中: ' + gameState.equippedWeapon.name + ' (点击挥砍)' : '鼠标左键踹击' }}</div>
+      <div class="inventory-label">
+        道具栏 (按 1/2/3 使用) | 
+        <span v-if="gameState.isChargingThrow" class="throw-charging">蓄力中... 松开右键扔出</span>
+        <span v-else-if="gameState.equippedWeapon && (gameState.equippedWeapon.type === 'mace' || gameState.equippedWeapon.type === 'bat')">装备中: {{ gameState.equippedWeapon.name }} (左击挥砍 / 右键蓄力扔出)</span>
+        <span v-else-if="gameState.equippedWeapon">装备中: {{ gameState.equippedWeapon.name }} (点击挥砍)</span>
+        <span v-else>鼠标左键踹击</span>
+      </div>
       <div class="inventory-items">
         <div 
           v-for="(item, index) in gameState.inventory" :key="item.id"
@@ -92,9 +98,11 @@
           <p>• WASD 移动</p>
           <p>• 鼠标 控制视角</p>
           <p>• 鼠标左键 踹击（1米内）</p>
+          <p>• 鼠标右键 蓄力扔出武器（狼牙棒/棒球棒）</p>
           <p>• 空格 举键盘挡脸（5秒）</p>
           <p>• 1/2/3 使用道具</p>
           <p>• 手机闪烁时注意，神人要回头了！</p>
+          <p>• 开会时攻击无效，武器会被消耗！</p>
         </div>
         <button @click="startGame" class="start-btn">开始游戏</button>
       </div>
@@ -131,7 +139,8 @@ const gameState = ref({
   level: 1,
   kickTarget: 5,
   isLevelTransition: false,
-  equippedWeapon: null as any
+  equippedWeapon: null as any,
+  isChargingThrow: false
 })
 
 const startGame = () => {
@@ -193,7 +202,8 @@ const restartGame = () => {
     level: 1,
     kickTarget: 5,
     isLevelTransition: false,
-    equippedWeapon: null
+    equippedWeapon: null,
+    isChargingThrow: false
   }
   gameStarted.value = false
   setTimeout(() => {
@@ -580,6 +590,17 @@ const handleResize = () => {
   bottom: 2px;
   left: 50%;
   transform: translateX(-50%);
+}
+
+.throw-charging {
+  color: #FF9800;
+  font-weight: bold;
+  animation: throwPulse 0.5s infinite;
+}
+
+@keyframes throwPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 .hidden-label {
