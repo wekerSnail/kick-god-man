@@ -8,6 +8,7 @@ import { EventBus } from './core/EventBus'
 import { InputManager } from './core/InputManager'
 import { CollisionSystem } from './systems/CollisionSystem'
 import { LevelManager } from './systems/LevelManager'
+import { AudioManager } from './systems/AudioManager'
 import { WEAPON_CONFIGS } from '../types/game'
 
 export class GameLoop {
@@ -18,6 +19,7 @@ export class GameLoop {
   private hidingSpots: HidingSpots
   private collisionSystem: CollisionSystem
   private levelManager: LevelManager
+  private audio: AudioManager
   private clock: THREE.Clock
   private isRunning: boolean = false
   private kickCount: number = 0
@@ -45,6 +47,7 @@ export class GameLoop {
     this.hidingSpots = new HidingSpots(this.sceneManager.getScene())
     this.collisionSystem = new CollisionSystem(this.player, this.enemy, this.hidingSpots, this.props)
     this.levelManager = new LevelManager(this.events)
+    this.audio = new AudioManager()
     this.clock = new THREE.Clock()
 
     this.clickHandler = () => this.player.kick()
@@ -101,6 +104,7 @@ export class GameLoop {
       const hasInvisible = this.inventory.some(p => p.type === 'invisible' && p.active)
       if (!hasInvisible) {
         this.health--
+        this.audio.play('hit')
         if (this.health <= 0) {
           this.gameOver(false)
         }
@@ -112,6 +116,7 @@ export class GameLoop {
 
       if (this.enemy.isInMeeting()) {
         if (this.player.getIsSwinging() && !this.kickCounted) {
+          this.audio.play('blocked')
           this.player.unequipWeapon()
           this.kickCounted = true
         }
@@ -122,6 +127,7 @@ export class GameLoop {
             this.kickCount += weapon.damage
             this.score += 10
             this.kickCounted = true
+            this.audio.play('hit')
             if (weapon.stunDuration > 0) {
               this.enemy.applyStun(weapon.stunDuration)
             }
@@ -132,6 +138,7 @@ export class GameLoop {
           this.kickCount++
           this.score += 10
           this.kickCounted = true
+          this.audio.play('kick')
           if (this.levelManager.onKick(this.kickCount)) {
             this.createVictoryParticles()
           }
@@ -271,6 +278,7 @@ export class GameLoop {
     this.hidingSpots.dispose()
     this.input.dispose()
     this.events.clear()
+    this.audio.dispose()
   }
 
   getKickCount(): number {
