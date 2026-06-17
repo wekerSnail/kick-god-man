@@ -332,7 +332,7 @@ export class GameLoop {
       }
 
       particles.geometry.attributes.position.needsUpdate = true
-      particles.material.opacity = Math.max(0, 1 - particles.userData.life / 2)
+      ;(particles.material as THREE.PointsMaterial).opacity = Math.max(0, 1 - particles.userData.life / 2)
     })
   }
 

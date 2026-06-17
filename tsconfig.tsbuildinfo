@@ -1,0 +1,1 @@
+{"root":["./src/main.ts","./src/shims-vue.d.ts","./src/game/enemy.ts","./src/game/gameloop.ts","./src/game/hidingspots.ts","./src/game/player.ts","./src/game/props.ts","./src/game/scenemanager.ts","./src/types/game.ts","./src/app.vue","./src/components/game.vue","./src/components/stickfigure.vue"],"version":"5.6.3"}
