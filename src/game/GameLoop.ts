@@ -313,6 +313,9 @@ export class GameLoop {
           return false
         }
       }
+      if (item.count <= 0 && !item.active) {
+        return false
+      }
       return true
     })
   }
@@ -338,9 +341,6 @@ export class GameLoop {
         }
         if (prop.type === 'invisible') {
           this.player.setInvisible(true)
-        }
-        if (prop.count <= 0) {
-          this.inventory.splice(index, 1)
         }
       }
     }
