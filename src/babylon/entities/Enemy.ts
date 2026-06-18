@@ -39,6 +39,8 @@ export class Enemy {
   private patrolTextSprite: Sprite | null = null
   private patrolWaypoints: Vector3[] = []
   private currentWaypointIndex: number = 0
+  private patrolDistanceTraveled: number = 0
+  private nextTurnDistance: number = 0
 
   private exclSpriteManager: SpriteManager | null = null
   private exclSprite: Sprite | null = null
@@ -119,8 +121,8 @@ export class Enemy {
       new Vector3(-3, 0, -8),   // 下方偏左
     ]
 
-    // 随机选择10-12个路径点
-    const numPoints = 10 + Math.floor(Math.random() * 3)
+    // 随机选择3-8个路径点
+    const numPoints = 3 + Math.floor(Math.random() * 6)
     const shuffled = [...possibleWaypoints].sort(() => Math.random() - 0.5)
     this.patrolWaypoints = shuffled.slice(0, numPoints)
 
@@ -364,6 +366,8 @@ export class Enemy {
   startPatrolWalk(): void {
     this.regeneratePatrolWaypoints()
     this.currentWaypointIndex = 1
+    this.patrolDistanceTraveled = 0
+    this.nextTurnDistance = 2 + Math.random() * 3
   }
 
   moveAlongPatrol(dt: number, speed: number): boolean {
@@ -382,21 +386,33 @@ export class Enemy {
         this.isWalking = false
         return true
       }
-      // 到达路径点后，确保继续走路状态
+      // 到达路径点后，重新设置下一次转向距离
+      this.nextTurnDistance = 2 + Math.random() * 3
+      this.patrolDistanceTraveled = 0
       this.isWalking = true
       return false
     }
 
-    this.isWalking = true
-    direction.normalize()
-    this.position.addInPlace(direction.scaleInPlace(speed * dt))
-    this.mesh.position = this.position.clone()
+    // 检查是否需要随机转向
+    this.patrolDistanceTraveled += speed * dt
+    if (this.patrolDistanceTraveled >= this.nextTurnDistance) {
+      // 随机转向90度（左或右）
+      const turnDirection = Math.random() < 0.5 ? 1 : -1
+      this.mesh.rotation.y += turnDirection * Math.PI / 2
+      this.patrolDistanceTraveled = 0
+      this.nextTurnDistance = 2 + Math.random() * 3
+    }
 
-    const targetRotation = Math.atan2(direction.x, direction.z)
-    const currentRotation = this.mesh.rotation.y
-    const rotationDiff = targetRotation - currentRotation
-    const normalizedDiff = Math.atan2(Math.sin(rotationDiff), Math.cos(rotationDiff))
-    this.mesh.rotation.y += normalizedDiff * 10 * dt
+    this.isWalking = true
+
+    // 使用当前朝向移动（而不是直接朝向目标点）
+    const moveDir = new Vector3(
+      Math.sin(this.mesh.rotation.y),
+      0,
+      Math.cos(this.mesh.rotation.y)
+    )
+    this.position.addInPlace(moveDir.scaleInPlace(speed * dt))
+    this.mesh.position = this.position.clone()
 
     return false
   }
