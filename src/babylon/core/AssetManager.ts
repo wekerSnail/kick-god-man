@@ -32,7 +32,12 @@ export class AssetManager {
       return this.cloneCharacter(key)
     }
 
-    const result = await SceneLoader.ImportMeshAsync('', '', glbPath, this.scene)
+    // 拆分路径为根目录和文件名，以便正确解析纹理路径
+    const lastSlash = glbPath.lastIndexOf('/')
+    const rootUrl = lastSlash >= 0 ? glbPath.substring(0, lastSlash + 1) : ''
+    const fileName = lastSlash >= 0 ? glbPath.substring(lastSlash + 1) : glbPath
+
+    const result = await SceneLoader.ImportMeshAsync('', rootUrl, fileName, this.scene)
 
     const root = new TransformNode(key, this.scene)
     result.meshes.forEach(m => {
@@ -82,7 +87,12 @@ export class AssetManager {
     }
 
     try {
-      const result = await SceneLoader.ImportMeshAsync('', '', glbPath, this.scene)
+      // 拆分路径为根目录和文件名，以便正确解析纹理路径
+      const lastSlash = glbPath.lastIndexOf('/')
+      const rootUrl = lastSlash >= 0 ? glbPath.substring(0, lastSlash + 1) : ''
+      const fileName = lastSlash >= 0 ? glbPath.substring(lastSlash + 1) : glbPath
+
+      const result = await SceneLoader.ImportMeshAsync('', rootUrl, fileName, this.scene)
 
       const root = new TransformNode(key, this.scene)
       result.meshes.forEach(m => {
