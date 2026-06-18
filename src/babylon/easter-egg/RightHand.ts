@@ -87,7 +87,7 @@ export class RightHand {
     this._weaponNode.parent = this._rightHandBone
 
     // 武器位置偏移（相对于右手骨骼）
-    this._weaponNode.position = new Vector3(0, 0.05, 0.1)
+    this._weaponNode.position = new Vector3(0, 0, 0)
     this._weaponNode.rotation = new Vector3(0, 0, 0)
 
     // 加载武器 GLB 模型
@@ -101,7 +101,7 @@ export class RightHand {
       this._weaponModel.parent = this._weaponNode
 
       // 调整武器大小和方向
-      this._weaponModel.scaling = new Vector3(0.5, 0.5, 0.5)
+      this._weaponModel.scaling = new Vector3(1, 1, 1)
       this._weaponModel.rotation = new Vector3(0, Math.PI, 0)
 
       console.log(`[RightHand] Successfully loaded weapon: ${weaponType}`)
@@ -150,10 +150,10 @@ export class RightHand {
 
     this._idleTime += delta
 
-    // 手臂轻微晃动
-    if (this._rightHandBone) {
-      this._rightHandBone.position.y += Math.sin(this._idleTime * 2) * 0.001
-    }
+    // 暂时禁用晃动，避免武器抖动
+    // if (this._rightHandBone) {
+    //   this._rightHandBone.position.y += Math.sin(this._idleTime * 2) * 0.001
+    // }
   }
 
   /**
