@@ -634,7 +634,7 @@ export class Player {
   }
 
   getCameraPosition(): Vector3 {
-    return new Vector3(this.position.x + 8.4, 10, this.position.z + 8.4)
+    return new Vector3(this.position.x - 8.4, 10, this.position.z + 8.4)
   }
 
   getCameraTarget(): Vector3 {

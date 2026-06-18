@@ -141,7 +141,7 @@ export class GameLoop {
     const dist = 12
     const height = 10
     const cameraOffset = new Vector3(
-      playerPos.x + dist * 0.7,
+      playerPos.x - dist * 0.7,
       height,
       playerPos.z + dist * 0.7
     )
