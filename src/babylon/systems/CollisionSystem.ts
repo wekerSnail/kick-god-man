@@ -36,14 +36,16 @@ export class CollisionSystem {
     const playerPos = this.player.getPosition()
     const distance = Vector3.Distance(enemyPos, playerPos)
 
-    if (distance > 5) return false
+    // 增加检测范围从5到7，让Boss更容易发现玩家
+    if (distance > 7) return false
 
     const angle = this.enemy.getRotationY()
     const forward = new Vector3(Math.sin(angle), 0, Math.cos(angle)).normalize()
 
     const toPlayer = playerPos.subtract(enemyPos).normalize()
     const dot = Vector3.Dot(forward, toPlayer)
-    const halfAngle = 25 * Math.PI / 180
+    // 增加检测角度从25°到40°，让Boss更容易发现侧面的玩家
+    const halfAngle = 40 * Math.PI / 180
 
     return dot > Math.cos(halfAngle)
   }

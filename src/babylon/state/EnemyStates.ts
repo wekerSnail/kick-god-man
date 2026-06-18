@@ -7,6 +7,8 @@ export class NormalState implements IState<Enemy> {
 
   enter(ctx: Enemy): void {
     ctx.scheduleNextLookBack();
+    // 重置玩家检测标志，避免下次回头时立即触发 gameOver
+    ctx.setLookBackDetected(false);
     // 只在首次进入时重置巡查和会议计时器，从其他状态返回时保持原有计时
     // 通过检查当前计时器是否大于0来判断是否需要初始化
     if (ctx.nextPatrolTime <= 0) {
@@ -187,6 +189,8 @@ export class LookingBackState implements IState<Enemy> {
     this.timer = 0;
     this.baseRotation = ctx.getRotationY();
     this.detectedPlayer = false;
+    // 重置检测标志，避免上次检测结果影响本次
+    ctx.setLookBackDetected(false);
   }
 
   update(ctx: Enemy, dt: number): IState<Enemy> | null {
@@ -347,8 +351,8 @@ export class PatrolState implements IState<Enemy> {
   private readonly STAND_UP_DURATION = 0.6;
   private readonly SIT_DOWN_DURATION = 0.6;
   private readonly MOVE_SPEED = 3.5;
-  private readonly DETECTION_RANGE = 5;
-  private readonly DETECTION_HALF_ANGLE = (25 * Math.PI) / 180;
+  private readonly DETECTION_RANGE = 7;
+  private readonly DETECTION_HALF_ANGLE = (40 * Math.PI) / 180;
 
   enter(ctx: Enemy): void {
     this.phase = "warning";

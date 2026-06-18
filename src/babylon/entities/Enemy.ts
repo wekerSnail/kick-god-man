@@ -103,14 +103,45 @@ export class Enemy {
   }
 
   private setupPatrolWaypoints(): void {
-    this.patrolWaypoints = [
-      new Vector3(0, 0, -8),
-      new Vector3(-4, 0, -8),
-      new Vector3(-4, 0, -4),
-      new Vector3(4, 0, -4),
-      new Vector3(4, 0, -8),
-      new Vector3(0, 0, -8)
+    // 基础路径点：办公室内的关键位置（房间大小20，从-10到10）
+    const possibleWaypoints = [
+      new Vector3(-7, 0, -8),   // 左下方
+      new Vector3(-7, 0, -4),   // 左侧中间
+      new Vector3(-7, 0, 0),    // 左上方
+      new Vector3(-3, 0, 0),    // 上方偏左
+      new Vector3(0, 0, 0),     // 上方中间
+      new Vector3(3, 0, 0),     // 上方偏右
+      new Vector3(7, 0, 0),     // 右上方
+      new Vector3(7, 0, -4),    // 右侧中间
+      new Vector3(7, 0, -8),    // 右下方
+      new Vector3(3, 0, -8),    // 下方偏右
+      new Vector3(0, 0, -8),    // 下方中间
+      new Vector3(-3, 0, -8),   // 下方偏左
     ]
+
+    // 随机选择3-5个路径点
+    const numPoints = 3 + Math.floor(Math.random() * 3)
+    const shuffled = [...possibleWaypoints].sort(() => Math.random() - 0.5)
+    this.patrolWaypoints = shuffled.slice(0, numPoints)
+
+    // 确保路径点之间有足够的距离（至少3单位）
+    this.patrolWaypoints = this.patrolWaypoints.filter((point, index) => {
+      if (index === 0) return true
+      const prev = this.patrolWaypoints[index - 1]
+      const dist = Vector3.Distance(prev, point)
+      return dist > 3
+    })
+
+    // 如果过滤后路径点太少，使用默认路径
+    if (this.patrolWaypoints.length < 2) {
+      this.patrolWaypoints = [
+        new Vector3(0, 0, -8),
+        new Vector3(-6, 0, -8),
+        new Vector3(-6, 0, -2),
+        new Vector3(6, 0, -2),
+        new Vector3(6, 0, -8),
+      ]
+    }
   }
 
   update(delta: number, _playerPosition: Vector3, _playerIsInvisible: boolean): void {
@@ -118,8 +149,8 @@ export class Enemy {
     this.updateWalkAnimation(delta)
   }
 
-  playAnimation(name: string, loop: boolean = true): void {
-    if (this.currentAnimName === name) return
+  playAnimation(name: string, loop: boolean = true): boolean {
+    if (this.currentAnimName === name) return true
     this.animationGroups.forEach(ag => ag.stop())
     this.currentAnimName = name
     const anim = this.animationGroups.find(ag =>
@@ -129,8 +160,10 @@ export class Enemy {
       anim.loopAnimation = loop
       anim.reset()
       anim.start()
+      return true
     } else {
       this.currentAnimName = ''
+      return false
     }
   }
 
@@ -344,6 +377,8 @@ export class Enemy {
         this.isWalking = false
         return true
       }
+      // 到达路径点后，确保继续走路状态
+      this.isWalking = true
       return false
     }
 
@@ -369,6 +404,8 @@ export class Enemy {
       this.position = this.originalPosition.clone()
       this.mesh.position = this.position.clone()
       this.isWalking = false
+      // 重置旋转到初始朝向（面向桌子）
+      this.mesh.rotation.y = Math.PI
       return true
     }
 
@@ -390,17 +427,23 @@ export class Enemy {
     if (!this.modelRoot) return
 
     if (this.isWalking) {
-      this.playAnimation('Walk')
+      // 尝试播放走路动画，如果找不到则播放默认动画
+      if (!this.playAnimation('Walk')) {
+        this.playAnimation('Run')  // 备选：跑步动画
+      }
     } else {
       this.playAnimation('Idle')
     }
   }
 
   checkPatrolDetection(_range: number, _halfAngle: number): boolean {
+    // 实际的检测逻辑在 CollisionSystem.checkPatrolVision() 中实现
+    // 这个方法保留接口兼容性，但检测逻辑已移至 CollisionSystem
     return false
   }
 
   reportPatrolDamage(): void {
+    // 实际的伤害逻辑在 GameLoop 中通过 CollisionSystem.checkEnemyDetection() 实现
   }
 
   onAttacked(playerPosition: Vector3, playerIsUsingKeyboard: boolean): void {

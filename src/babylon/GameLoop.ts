@@ -20,6 +20,7 @@ import { AudioManager } from './systems/AudioManager'
 import { ProjectileSystem } from './systems/ProjectileSystem'
 import { Props } from './Props'
 import { WEAPON_CONFIGS } from '../types/game'
+import { EasterEggMode } from './easter-egg/EasterEggMode'
 
 export class GameLoop {
   private engineContext: EngineContext
@@ -61,6 +62,8 @@ export class GameLoop {
   private wasPatrolling: boolean = false
   private _clickHandler: (() => void) | null = null
   private canvas: HTMLCanvasElement | null = null
+  private easterEggMode: EasterEggMode | null = null
+  private isEasterEgg = false
 
   constructor(container: HTMLElement, onStateChange: (state: any) => void) {
     this.onStateChange = onStateChange
@@ -136,6 +139,38 @@ export class GameLoop {
 
   private update(delta: number): void {
     if (this.isGameOver) return
+
+    // 彩蛋模式：跳过主游戏逻辑，只更新彩蛋子系统
+    if (this.isEasterEgg && this.easterEggMode) {
+      this.easterEggMode.update(delta)
+      this.onStateChange({
+        kickCount: this.kickCount,
+        health: this.health,
+        maxHealth: this.maxHealth,
+        isGameOver: this.isGameOver,
+        isWin: this.isWin,
+        score: this.score,
+        inventory: this.inventory,
+        potCooldown: 0,
+        potActive: false,
+        potRemainingTime: 0,
+        enemyState: 'normal',
+        isHidden: false,
+        level: this.levelManager.getLevel(),
+        kickTarget: this.levelManager.getKickTarget(),
+        isLevelTransition: this.levelManager.getIsTransitioning(),
+        equippedWeapon: null,
+        isChargingThrow: false,
+        attackCooldown: 0,
+        comboActive: false,
+        invisibleActive: false,
+        isPatrolWarning: false,
+        isEasterEgg: true,
+        easterEggTimeRemaining: this.easterEggMode.timeRemaining,
+        easterEggWeaponType: this.easterEggMode.currentWeaponType
+      })
+      return
+    }
 
     // 先处理投掷输入，让 player.update() 能立即渲染蓄力条
     if (this.input.isActionJustPressed('throwWeapon')) {
@@ -231,9 +266,16 @@ export class GameLoop {
     }
 
     if (this.enemy.isLookingBack()) {
-      const dist = Vector3.Distance(this.player.getPosition(), this.enemy.getPosition())
-      if (dist < 6) {
-        this.enemy.setLookBackDetected(true)
+      // 检查玩家是否在隐藏点或使用键盘盾牌
+      const isHidden = this.hidingSpots.isInHidingSpot(this.player.getPosition())
+      const hasPot = this.player.getPotActive()
+
+      // 如果玩家不在隐藏点且没有使用键盘盾牌，检查距离
+      if (!isHidden && !hasPot) {
+        const dist = Vector3.Distance(this.player.getPosition(), this.enemy.getPosition())
+        if (dist < 6) {
+          this.enemy.setLookBackDetected(true)
+        }
       }
     }
 
@@ -384,7 +426,10 @@ export class GameLoop {
       attackCooldown: this.player.getAttackCooldown(),
       comboActive: this.player.isComboActive(),
       invisibleActive: this.player.isInvisible(),
-      isPatrolWarning: this.enemy.isPatrolling()
+      isPatrolWarning: this.enemy.isPatrolling(),
+      isEasterEgg: false,
+      easterEggTimeRemaining: 0,
+      easterEggWeaponType: null
     })
   }
 
@@ -487,6 +532,22 @@ export class GameLoop {
 
   getIsWin(): boolean {
     return this.isWin
+  }
+
+  startEasterEgg(onComplete?: () => void): void {
+    this.isEasterEgg = true
+    this.easterEggMode = new EasterEggMode()
+    this.easterEggMode.init(this.scene, this.assetManager, this.enemy)
+    this.easterEggMode.start(() => {
+      this.stopEasterEgg()
+      onComplete?.()
+    })
+  }
+
+  stopEasterEgg(): void {
+    this.easterEggMode?.stop()
+    this.easterEggMode = null
+    this.isEasterEgg = false
   }
 
   private createVictoryParticles(): void {
