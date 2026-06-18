@@ -82,17 +82,25 @@ export class AssetManager {
       return this.cloneProp(key)
     }
 
-    const result = await SceneLoader.ImportMeshAsync('', '', glbPath, this.scene)
+    try {
+      const result = await SceneLoader.ImportMeshAsync('', '', glbPath, this.scene)
 
-    const root = new TransformNode(key, this.scene)
-    result.meshes.forEach(m => {
-      m.parent = root
-      m.receiveShadows = true
-      this.shadowGen.addShadowCaster(m)
-    })
+      const root = new TransformNode(key, this.scene)
+      result.meshes.forEach(m => {
+        m.parent = root
+        m.receiveShadows = true
+        this.shadowGen.addShadowCaster(m)
+      })
 
-    this.cache.set(key, root as unknown as Mesh)
-    return root as unknown as Mesh
+      this.cache.set(key, root as unknown as Mesh)
+      return root as unknown as Mesh
+    } catch (err) {
+      console.warn(`[AssetManager] Failed to load prop ${key} from ${glbPath}:`, err)
+      // 返回一个空 TransformNode 占位，避免上层 await 时崩溃
+      const fallback = new TransformNode(`${key}_fallback`, this.scene) as unknown as Mesh
+      this.cache.set(key, fallback as unknown as TransformNode)
+      return fallback
+    }
   }
 
   private cloneProp(key: string): Mesh {
@@ -105,6 +113,14 @@ export class AssetManager {
       this.shadowGen.addShadowCaster(m)
     })
     return clone as unknown as Mesh
+  }
+
+  /**
+   * 检查某个 key 是否已成功加载到缓存（加载失败时返回 false）。
+   * 用于上层决定是否回退到程序化几何体。
+   */
+  hasProp(key: string): boolean {
+    return this.cache.has(key) && !this.cache.get(key)!.name.endsWith('_fallback')
   }
 
   dispose(): void {

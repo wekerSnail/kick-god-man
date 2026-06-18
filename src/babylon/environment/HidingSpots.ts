@@ -5,45 +5,100 @@ import {
   Color3,
   MeshBuilder,
   PBRMaterial,
-  ShadowGenerator
+  ShadowGenerator,
+  Mesh
 } from '@babylonjs/core'
+import type { AssetManager } from '../core/AssetManager'
 import type { HidingSpot } from '../../types/game'
 import { HIDING_SPOTS } from '../../types/game'
 
+const FURNITURE_BASE = '/src/assets/kenney_furniture-kit/Models/GLB format'
+
+/**
+ * 躲藏点：盆栽 / 文件柜 / 沙发。
+ * 优先加载 Kenney 真实 GLB 模型；加载失败则回退到明亮程序化几何体。
+ */
 export class HidingSpots {
+  private scene: Scene
+  private shadowGen: ShadowGenerator
+  private assetManager: AssetManager
   private spots: { config: HidingSpot; mesh: TransformNode }[] = []
 
   constructor(
-    private scene: Scene,
-    private shadowGen: ShadowGenerator
+    scene: Scene,
+    shadowGen: ShadowGenerator,
+    assetManager: AssetManager
   ) {
+    this.scene = scene
+    this.shadowGen = shadowGen
+    this.assetManager = assetManager
     this.createHidingSpots()
   }
 
-  private createHidingSpots(): void {
-    HIDING_SPOTS.forEach(config => {
-      const mesh = this.createHidingSpotMesh(config)
-      mesh.position = new Vector3(config.position.x, config.position.y, config.position.z)
-      this.spots.push({ config, mesh })
-    })
-  }
-
-  private createHidingSpotMesh(config: HidingSpot): TransformNode {
-    switch (config.id) {
-      case 'plant':
-        return this.createPlant()
-      case 'cabinet':
-        return this.createCabinet()
-      case 'sofa':
-        return this.createSofa()
-      default:
-        return new TransformNode(config.id, this.scene)
+  private async createHidingSpots(): Promise<void> {
+    for (const config of HIDING_SPOTS) {
+      const parent = new TransformNode(`hide_${config.id}`, this.scene)
+      switch (config.id) {
+        case 'plant':
+          await this.createPlant(parent)
+          break
+        case 'cabinet':
+          await this.createCabinet(parent)
+          break
+        case 'sofa':
+          await this.createSofa(parent)
+          break
+      }
+      parent.position = new Vector3(config.position.x, config.position.y, config.position.z)
+      this.spots.push({ config, mesh: parent })
     }
   }
 
-  private createPlant(): TransformNode {
-    const group = new TransformNode('plant', this.scene)
+  private placeProp(prop: Mesh, parent: TransformNode, targetHeight: number): boolean {
+    const childMeshes = prop.getChildMeshes()
+    if (childMeshes.length === 0) return false
+    prop.refreshBoundingInfo(true)
+    const info = prop.getBoundingInfo()
+    const minY = info.boundingBox.minimumWorld.y
+    const height = Math.max(0.001, info.boundingBox.maximumWorld.y - minY)
+    const scale = targetHeight / height
+    prop.parent = parent
+    prop.scaling = new Vector3(scale, scale, scale)
+    prop.position.y = -minY * scale
+    childMeshes.forEach(m => {
+      m.receiveShadows = true
+      this.shadowGen.addShadowCaster(m)
+    })
+    return true
+  }
 
+  private async createPlant(parent: TransformNode): Promise<void> {
+    const model = await this.assetManager.loadProp('pottedPlant', `${FURNITURE_BASE}/pottedPlant.glb`)
+    const placed = this.placeProp(model, parent, 1.8)
+    if (!placed) {
+      this.fallbackPlant(parent)
+    }
+  }
+
+  private async createCabinet(parent: TransformNode): Promise<void> {
+    const model = await this.assetManager.loadProp('bookcaseClosedDoors', `${FURNITURE_BASE}/bookcaseClosedDoors.glb`)
+    const placed = this.placeProp(model, parent, 2.4)
+    if (!placed) {
+      this.fallbackCabinet(parent)
+    }
+  }
+
+  private async createSofa(parent: TransformNode): Promise<void> {
+    const model = await this.assetManager.loadProp('loungeSofa', `${FURNITURE_BASE}/loungeSofa.glb`)
+    const placed = this.placeProp(model, parent, 1.1)
+    if (!placed) {
+      this.fallbackSofa(parent)
+    }
+  }
+
+  // ===== 明亮回退几何体 =====
+
+  private fallbackPlant(parent: TransformNode): void {
     const pot = MeshBuilder.CreateCylinder('pot', {
       diameterTop: 0.8,
       diameterBottom: 0.6,
@@ -51,12 +106,10 @@ export class HidingSpots {
       tessellation: 8
     }, this.scene)
     pot.position.y = 0.3
-    pot.parent = group
+    pot.parent = parent
     const potMat = new PBRMaterial('potMat', this.scene)
-    potMat.albedoColor = Color3.FromHexString('#8B4513')
+    potMat.albedoColor = Color3.FromHexString('#A0522D')
     pot.material = potMat
-    pot.receiveShadows = true
-    this.shadowGen.addShadowCaster(pot)
 
     const trunk = MeshBuilder.CreateCylinder('trunk', {
       diameter: 0.16,
@@ -64,13 +117,13 @@ export class HidingSpots {
       tessellation: 8
     }, this.scene)
     trunk.position.y = 1.1
-    trunk.parent = group
+    trunk.parent = parent
     const trunkMat = new PBRMaterial('trunkMat', this.scene)
-    trunkMat.albedoColor = Color3.FromHexString('#654321')
+    trunkMat.albedoColor = Color3.FromHexString('#8B5A2B')
     trunk.material = trunkMat
-    trunk.receiveShadows = true
-    this.shadowGen.addShadowCaster(trunk)
 
+    const leafMat = new PBRMaterial('leafMat', this.scene)
+    leafMat.albedoColor = Color3.FromHexString('#4CAF50')
     const leafPositions = [
       new Vector3(0, 1.8, 0),
       new Vector3(0.3, 1.6, 0.2),
@@ -78,139 +131,52 @@ export class HidingSpots {
       new Vector3(0.2, 1.7, -0.3),
       new Vector3(-0.2, 1.7, 0.3)
     ]
-
-    const leafMat = new PBRMaterial('leafMat', this.scene)
-    leafMat.albedoColor = Color3.FromHexString('#228B22')
-
     leafPositions.forEach((pos, i) => {
       const leaf = MeshBuilder.CreateSphere(`leaf_${i}`, {
         diameter: 0.6,
         segments: 8
       }, this.scene)
       leaf.position = pos
-      leaf.parent = group
+      leaf.parent = parent
       leaf.material = leafMat
-      leaf.receiveShadows = true
-      this.shadowGen.addShadowCaster(leaf)
     })
-
-    return group
   }
 
-  private createCabinet(): TransformNode {
-    const group = new TransformNode('cabinet', this.scene)
-
-    const body = MeshBuilder.CreateBox('cabinetBody', {
+  private fallbackCabinet(parent: TransformNode): void {
+    const mat = new PBRMaterial('fallbackCabinetMat', this.scene)
+    mat.albedoColor = Color3.FromHexString('#B8B0A0')
+    mat.roughness = 0.8
+    const body = MeshBuilder.CreateBox('fallbackCabinet', {
       width: 2,
-      height: 2.5,
+      height: 2.4,
       depth: 0.8
     }, this.scene)
-    body.position.y = 1.25
-    body.parent = group
-    const bodyMat = new PBRMaterial('cabinetBodyMat', this.scene)
-    bodyMat.albedoColor = Color3.FromHexString('#8B8B83')
-    body.material = bodyMat
+    body.position.y = 1.2
+    body.parent = parent
+    body.material = mat
     body.receiveShadows = true
-    this.shadowGen.addShadowCaster(body)
-
-    const drawerPositions = [0.4, 0, -0.4]
-    const drawerMat = new PBRMaterial('drawerMat', this.scene)
-    drawerMat.albedoColor = Color3.FromHexString('#696969')
-    const handleMat = new PBRMaterial('handleMat', this.scene)
-    handleMat.albedoColor = Color3.FromHexString('#C0C0C0')
-
-    drawerPositions.forEach((y, i) => {
-      const drawer = MeshBuilder.CreateBox(`drawer_${i}`, {
-        width: 1.8,
-        height: 0.6,
-        depth: 0.05
-      }, this.scene)
-      drawer.position = new Vector3(0, 1.2 + y, 0.43)
-      drawer.parent = group
-      drawer.material = drawerMat
-
-      const handle = MeshBuilder.CreateBox(`handle_${i}`, {
-        width: 0.3,
-        height: 0.05,
-        depth: 0.05
-      }, this.scene)
-      handle.position = new Vector3(0, 1.2 + y, 0.46)
-      handle.parent = group
-      handle.material = handleMat
-    })
-
-    return group
   }
 
-  private createSofa(): TransformNode {
-    const group = new TransformNode('sofa', this.scene)
-    const sofaMat = new PBRMaterial('sofaMat', this.scene)
-    sofaMat.albedoColor = Color3.FromHexString('#8B0000')
-
+  private fallbackSofa(parent: TransformNode): void {
+    const mat = new PBRMaterial('fallbackSofaMat', this.scene)
+    mat.albedoColor = Color3.FromHexString('#5A7A9A')
+    mat.roughness = 0.9
     const seat = MeshBuilder.CreateBox('seat', {
       width: 3,
       height: 0.5,
       depth: 1.2
     }, this.scene)
     seat.position.y = 0.4
-    seat.parent = group
-    seat.material = sofaMat
-    seat.receiveShadows = true
-    this.shadowGen.addShadowCaster(seat)
-
-    const back = MeshBuilder.CreateBox('back', {
+    seat.parent = parent
+    seat.material = mat
+    const back = MeshBuilder.CreateBox('sofaBack', {
       width: 3,
       height: 0.8,
       depth: 0.3
     }, this.scene)
     back.position = new Vector3(0, 1.0, -0.45)
-    back.parent = group
-    back.material = sofaMat
-    this.shadowGen.addShadowCaster(back)
-
-    const armLeft = MeshBuilder.CreateBox('armLeft', {
-      width: 0.3,
-      height: 0.6,
-      depth: 1.2
-    }, this.scene)
-    armLeft.position = new Vector3(-1.35, 0.7, 0)
-    armLeft.parent = group
-    armLeft.material = sofaMat
-    this.shadowGen.addShadowCaster(armLeft)
-
-    const armRight = MeshBuilder.CreateBox('armRight', {
-      width: 0.3,
-      height: 0.6,
-      depth: 1.2
-    }, this.scene)
-    armRight.position = new Vector3(1.35, 0.7, 0)
-    armRight.parent = group
-    armRight.material = sofaMat
-    this.shadowGen.addShadowCaster(armRight)
-
-    const legMat = new PBRMaterial('legMat', this.scene)
-    legMat.albedoColor = Color3.FromHexString('#654321')
-
-    const legPositions = [
-      new Vector3(-1.2, 0.15, -0.4),
-      new Vector3(1.2, 0.15, -0.4),
-      new Vector3(-1.2, 0.15, 0.4),
-      new Vector3(1.2, 0.15, 0.4)
-    ]
-
-    legPositions.forEach((pos, i) => {
-      const leg = MeshBuilder.CreateCylinder(`leg_${i}`, {
-        diameter: 0.16,
-        height: 0.3,
-        tessellation: 8
-      }, this.scene)
-      leg.position = pos
-      leg.parent = group
-      leg.material = legMat
-      this.shadowGen.addShadowCaster(leg)
-    })
-
-    return group
+    back.parent = parent
+    back.material = mat
   }
 
   isInHidingSpot(playerPosition: Vector3): boolean {

@@ -80,8 +80,8 @@ export class GameLoop {
   }
 
   async init(): Promise<void> {
-    this.officeLevel = new OfficeLevel(this.scene, this.engineContext.shadowGen)
-    this.hidingSpots = new HidingSpots(this.scene, this.engineContext.shadowGen)
+    this.officeLevel = new OfficeLevel(this.scene, this.engineContext.shadowGen, this.assetManager)
+    this.hidingSpots = new HidingSpots(this.scene, this.engineContext.shadowGen, this.assetManager)
 
     this.player = new Player(
       this.scene,
