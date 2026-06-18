@@ -82,8 +82,17 @@ export class EasterEggMode {
     this._rightHand = new RightHand(this._scene, this._assetManager)
     this._hud = new EasterEggHUD(this._scene)
 
-    // 加载右手模型
+    // 连接相机和武器跟随系统（CS:GO 风格）
+    this._camera.setWeaponSwayCallbacks(
+      (deltaYaw, deltaPitch) => this._rightHand.updateSway(deltaYaw, deltaPitch),
+      () => this._rightHand.resetSway()
+    )
+
+    // 加载武器系统
     await this._rightHand.load()
+
+    // 设置相机引用（武器跟随相机）
+    this._rightHand.setCamera(this._mainCamera!)
 
     // 激活子系统
     this._boss.activate()
@@ -95,8 +104,8 @@ export class EasterEggMode {
     const playerPos = new Vector3(0, 0, 3) // 房间中心靠后
     this._camera.enter(playerPos, this._enemy.position)
 
-    // 倒计时 HUD
-    this._hud.create(new Vector3(0, 4, -5))
+    // 倒计时 HUD + 十字准星
+    this._hud.create(new Vector3(0, 4, -5), this._mainCamera!)
   }
 
   stop(): void {
@@ -140,6 +149,7 @@ export class EasterEggMode {
     // 更新子系统
     this._boss.update(delta)
     this._rightHand.update(delta)
+    this._camera.update(this._enemy.position, delta) // 更新相机（用于重置武器跟随）
     this._hud.update(this._timeRemaining)
 
     // 更新武器系统（射击逻辑）

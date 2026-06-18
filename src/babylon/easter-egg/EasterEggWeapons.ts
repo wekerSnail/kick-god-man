@@ -20,7 +20,6 @@ interface EasterEggExplosion {
 // 子弹配置
 const BULLET_SPEED = 50
 const BULLET_LIFETIME = 2 // 秒
-const BULLET_TRAIL_LENGTH = 0.3 // 弹道轨迹长度
 const HIT_RADIUS = 1.5 // 命中检测半径
 
 // 火箭炮配置
@@ -136,15 +135,20 @@ export class EasterEggWeapons {
    * 枪射击：快速直线子弹 + 弹道轨迹粒子
    */
   private _fireGun(origin: Vector3, direction: Vector3): void {
-    const bullet = MeshBuilder.CreateSphere('bullet', { diameter: 0.1 }, this._scene)
+    // 创建子弹（小而亮）
+    const bullet = MeshBuilder.CreateSphere('bullet', { diameter: 0.08 }, this._scene)
     bullet.position = origin.clone()
 
     const mat = new StandardMaterial('bulletMat', this._scene)
-    mat.emissiveColor = Color3.Yellow()
+    mat.emissiveColor = new Color3(1, 1, 0.5) // 亮黄色
+    mat.disableLighting = true
     bullet.material = mat
 
     // 创建弹道轨迹粒子
     this._createBulletTrail(bullet)
+
+    // 创建枪口闪光
+    this._createMuzzleFlash(origin)
 
     this._projectiles.push({
       node: bullet,
@@ -158,23 +162,34 @@ export class EasterEggWeapons {
   }
 
   /**
-   * 火箭炮射击：直线抛射物
+   * 火箭炮射击：导弹 + 烟雾尾迹
    */
   private _fireRocket(origin: Vector3, direction: Vector3): void {
+    // 创建导弹（更精致的形状）
     const rocket = MeshBuilder.CreateCylinder('rocket', {
-      height: 0.4,
-      diameterTop: 0.05,
-      diameterBottom: 0.15
+      height: 0.5,
+      diameterTop: 0.02,
+      diameterBottom: 0.12,
+      tessellation: 8
     }, this._scene)
     rocket.position = origin.clone()
 
     const mat = new StandardMaterial('rocketMat', this._scene)
-    mat.emissiveColor = Color3.Red()
+    mat.emissiveColor = new Color3(1, 0.3, 0) // 橙红色
+    mat.disableLighting = true
     rocket.material = mat
 
-    // 旋转火箭朝向飞行方向
+    // 旋转导弹朝向飞行方向
     const dir = direction.normalize()
-    rocket.rotation.x = Math.atan2(dir.z, dir.y)
+    const angle = Math.atan2(dir.x, dir.z)
+    rocket.rotation.y = angle
+    rocket.rotation.x = -Math.asin(dir.y)
+
+    // 创建导弹尾焰
+    this._createRocketTrail(rocket)
+
+    // 创建发射闪光
+    this._createMuzzleFlash(origin, new Color3(1, 0.5, 0))
 
     this._projectiles.push({
       node: rocket,
@@ -297,25 +312,115 @@ export class EasterEggWeapons {
    * 创建弹道轨迹粒子
    */
   private _createBulletTrail(bullet: TransformNode): void {
-    const ps = new ParticleSystem('bulletTrail', 20, this._scene)
+    const ps = new ParticleSystem('bulletTrail', 30, this._scene)
     ps.emitter = bullet.position.clone()
-    ps.createSphereEmitter(0.05)
+    ps.createSphereEmitter(0.03)
 
-    ps.color1 = new Color4(1, 1, 0, 1)
-    ps.color2 = new Color4(1, 0.5, 0, 0.5)
-    ps.colorDead = new Color4(0, 0, 0, 0)
+    ps.color1 = new Color4(1, 1, 0.5, 1)
+    ps.color2 = new Color4(1, 0.8, 0, 0.6)
+    ps.colorDead = new Color4(1, 0.5, 0, 0)
 
     ps.minSize = 0.02
-    ps.maxSize = 0.05
-    ps.minLifeTime = 0.05
-    ps.maxLifeTime = BULLET_TRAIL_LENGTH
+    ps.maxSize = 0.06
+    ps.minLifeTime = 0.03
+    ps.maxLifeTime = 0.15
+
+    ps.emitRate = 200
+    ps.gravity = Vector3.Zero()
+
+    ps.targetStopDuration = BULLET_LIFETIME
+    ps.disposeOnStop = true
+    ps.start()
+  }
+
+  /**
+   * 创建导弹尾焰粒子
+   */
+  private _createRocketTrail(rocket: TransformNode): void {
+    // 烟雾尾迹
+    const smoke = new ParticleSystem('rocketSmoke', 50, this._scene)
+    smoke.emitter = rocket.position.clone()
+    smoke.createSphereEmitter(0.08)
+
+    smoke.color1 = new Color4(0.8, 0.8, 0.8, 0.6)
+    smoke.color2 = new Color4(0.5, 0.5, 0.5, 0.3)
+    smoke.colorDead = new Color4(0.3, 0.3, 0.3, 0)
+
+    smoke.minSize = 0.1
+    smoke.maxSize = 0.3
+    smoke.minLifeTime = 0.2
+    smoke.maxLifeTime = 0.5
+
+    smoke.emitRate = 100
+    smoke.gravity = new Vector3(0, -0.5, 0)
+    smoke.direction1 = new Vector3(-0.1, -0.1, -0.1)
+    smoke.direction2 = new Vector3(0.1, 0.1, 0.1)
+
+    smoke.targetStopDuration = ROCKET_LIFETIME
+    smoke.disposeOnStop = true
+    smoke.start()
+
+    // 火焰尾焰
+    const fire = new ParticleSystem('rocketFire', 30, this._scene)
+    fire.emitter = rocket.position.clone()
+    fire.createSphereEmitter(0.05)
+
+    fire.color1 = new Color4(1, 0.8, 0, 1)
+    fire.color2 = new Color4(1, 0.3, 0, 0.8)
+    fire.colorDead = new Color4(1, 0, 0, 0)
+
+    fire.minSize = 0.05
+    fire.maxSize = 0.15
+    fire.minLifeTime = 0.05
+    fire.maxLifeTime = 0.2
+
+    fire.emitRate = 80
+    fire.gravity = Vector3.Zero()
+
+    fire.targetStopDuration = ROCKET_LIFETIME
+    fire.disposeOnStop = true
+    fire.start()
+  }
+
+  /**
+   * 创建枪口/发射闪光
+   */
+  private _createMuzzleFlash(position: Vector3, color?: Color3): void {
+    const flash = MeshBuilder.CreateSphere('muzzleFlash', { diameter: 0.3 }, this._scene)
+    flash.position = position.clone()
+
+    const mat = new StandardMaterial('flashMat', this._scene)
+    mat.emissiveColor = color || new Color3(1, 1, 0.5)
+    mat.disableLighting = true
+    mat.alpha = 0.8
+    flash.material = mat
+
+    // 闪光粒子
+    const ps = new ParticleSystem('muzzleParticles', 20, this._scene)
+    ps.emitter = flash
+    ps.createSphereEmitter(0.15)
+
+    ps.color1 = new Color4(1, 1, 0.5, 1)
+    ps.color2 = new Color4(1, 0.8, 0, 0.5)
+    ps.colorDead = new Color4(0, 0, 0, 0)
+
+    ps.minSize = 0.03
+    ps.maxSize = 0.1
+    ps.minLifeTime = 0.02
+    ps.maxLifeTime = 0.1
 
     ps.emitRate = 100
     ps.gravity = Vector3.Zero()
 
-    ps.targetStopDuration = 0.01
+    ps.targetStopDuration = 0.05
     ps.disposeOnStop = true
     ps.start()
+
+    // 快速消失
+    const disposeFlash = () => {
+      flash.dispose()
+    }
+    setTimeout(disposeFlash, 50)
   }
 
   /**

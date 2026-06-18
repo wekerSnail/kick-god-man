@@ -4,24 +4,16 @@ import {
   Vector3,
   MeshBuilder,
   StandardMaterial,
-  Color3
+  Color3,
+  FreeCamera
 } from '@babylonjs/core'
 import type { AssetManager } from '../core/AssetManager'
 import type { EasterEggWeaponType } from '../../types/game'
 
-// 使用 Vite 推荐的方式引入静态资源
-const PLAYER_MODEL_URL = new URL('/models/characters/player.glb', import.meta.url).href
+// 武器 GLB 路径
 const WEAPON_GUN_URL = new URL('/models/kenney_blaster-kit_2.1/blaster-a.glb', import.meta.url).href
 const WEAPON_ROCKET_URL = new URL('/models/kenney_blaster-kit_2.1/scope-large-a.glb', import.meta.url).href
 const WEAPON_GRENADE_URL = new URL('/models/kenney_blaster-kit_2.1/grenade-a.glb', import.meta.url).href
-
-// Mixamo 右手骨骼候选名称
-const RIGHT_HAND_BONE_CANDIDATES = [
-  'mixamorig:RightHand',
-  'RightHand',
-  'mixamorig:RightHandIndex1',
-  'RightHandIndex1'
-]
 
 // 武器 URL 映射
 const WEAPON_URLS: Record<EasterEggWeaponType, string> = {
@@ -31,18 +23,27 @@ const WEAPON_URLS: Record<EasterEggWeaponType, string> = {
 }
 
 /**
- * 彩蛋模式右手模型管理器
- * 加载 player.glb，隐藏身体，只显示右手区域的 mesh
+ * 彩蛋模式武器显示器
+ * 只渲染武器模型，跟随相机视角，CS:GO 风格
  */
 export class RightHand {
   private _scene: Scene
   private _assetManager: AssetManager
-  private _root: TransformNode | null = null
-  private _rightHandBone: TransformNode | null = null
   private _weaponNode: TransformNode | null = null
   private _weaponModel: TransformNode | null = null
   private _isActive = false
   private _idleTime = 0
+
+  // CS:GO 风格武器跟随
+  private _targetOffsetX = 0
+  private _targetOffsetY = 0
+  private _currentOffsetX = 0
+  private _currentOffsetY = 0
+  private _swaySpeed = 8 // 跟随速度
+  private _swayAmount = 0.15 // 跟随幅度
+
+  // 武器基础位置（屏幕右下角）
+  private _basePosition = new Vector3(0.3, -0.25, 0.5)
 
   constructor(scene: Scene, assetManager: AssetManager) {
     this._scene = scene
@@ -50,64 +51,56 @@ export class RightHand {
   }
 
   /**
-   * 加载玩家模型，隐藏身体，只保留右手
+   * 加载并初始化武器系统
    */
   async load(): Promise<void> {
-    const result = await this._assetManager.loadCharacter('player_easter', PLAYER_MODEL_URL)
-    this._root = result.root
-
-    // 调整模型到合理大小
-    this._root.scaling = new Vector3(1.8, 1.8, 1.8)
-
-    // 找到右手骨骼
-    this._rightHandBone = this._findRightHandBone()
-
-    // 隐藏身体 mesh，只保留右手附近区域
-    this._hideBodyKeepRightHand()
+    // 创建武器根节点（挂载到相机）
+    this._weaponNode = new TransformNode('weaponRoot', this._scene)
+    this._weaponNode.position = this._basePosition.clone()
   }
 
   /**
-   * 在右手骨骼上 attach 武器模型
+   * 设置相机引用（武器跟随相机移动）
+   */
+  setCamera(camera: FreeCamera): void {
+    if (this._weaponNode) {
+      this._weaponNode.parent = camera
+    }
+  }
+
+  /**
+   * 切换武器模型
    */
   async switchWeapon(weaponType: EasterEggWeaponType): Promise<void> {
     // 卸下旧武器
-    if (this._weaponNode) {
-      this._weaponNode.dispose()
-      this._weaponNode = null
-    }
     if (this._weaponModel) {
       this._weaponModel.dispose()
       this._weaponModel = null
     }
 
-    if (!this._rightHandBone) return
-
-    // 创建武器挂载节点
-    this._weaponNode = new TransformNode(`weapon_${weaponType}`, this._scene)
-    this._weaponNode.parent = this._rightHandBone
-
-    // 武器位置偏移（相对于右手骨骼）
-    this._weaponNode.position = new Vector3(0, 0, 0)
-    this._weaponNode.rotation = new Vector3(0, 0, 0)
+    if (!this._weaponNode) return
 
     // 加载武器 GLB 模型
     try {
       const glbPath = WEAPON_URLS[weaponType]
       console.log(`[RightHand] Loading weapon from: ${glbPath}`)
 
-      // 使用 loadProp 加载简单模型（不需要骨骼动画）
       const weaponRoot = await this._assetManager.loadProp(`weapon_${weaponType}`, glbPath)
       this._weaponModel = weaponRoot
       this._weaponModel.parent = this._weaponNode
 
-      // 调整武器大小和方向
-      this._weaponModel.scaling = new Vector3(1, 1, 1)
+      // 调整武器大小
+      this._weaponModel.scaling = new Vector3(0.15, 0.15, 0.15)
+
+      // 调整武器方向 - 枪口朝前
       this._weaponModel.rotation = new Vector3(0, Math.PI, 0)
+
+      // 武器位置微调
+      this._weaponModel.position = new Vector3(0, 0, 0)
 
       console.log(`[RightHand] Successfully loaded weapon: ${weaponType}`)
     } catch (e) {
       console.warn(`[RightHand] Failed to load weapon GLB for ${weaponType}, using placeholder`, e)
-      // 如果加载失败，创建占位几何体
       this._createWeaponPlaceholder(weaponType)
     }
   }
@@ -123,15 +116,15 @@ export class RightHand {
 
     switch (type) {
       case 'gun':
-        mesh = MeshBuilder.CreateBox('gunPlaceholder', { width: 0.1, height: 0.1, depth: 0.4 }, this._scene)
+        mesh = MeshBuilder.CreateBox('gunPlaceholder', { width: 0.05, height: 0.05, depth: 0.2 }, this._scene)
         mat.emissiveColor = Color3.Yellow()
         break
       case 'rocket':
-        mesh = MeshBuilder.CreateCylinder('rocketPlaceholder', { height: 0.5, diameterTop: 0.05, diameterBottom: 0.15 }, this._scene)
+        mesh = MeshBuilder.CreateCylinder('rocketPlaceholder', { height: 0.25, diameterTop: 0.02, diameterBottom: 0.08 }, this._scene)
         mat.emissiveColor = Color3.Red()
         break
       case 'grenade':
-        mesh = MeshBuilder.CreateSphere('grenadePlaceholder', { diameter: 0.2 }, this._scene)
+        mesh = MeshBuilder.CreateSphere('grenadePlaceholder', { diameter: 0.1 }, this._scene)
         mat.emissiveColor = Color3.Green()
         break
     }
@@ -143,37 +136,71 @@ export class RightHand {
   }
 
   /**
-   * 更新手臂 idle 动画
+   * 更新武器 - CS:GO 风格跟随 + 呼吸晃动
    */
   update(delta: number): void {
-    if (!this._isActive || !this._root) return
+    if (!this._isActive || !this._weaponNode) return
 
     this._idleTime += delta
 
-    // 暂时禁用晃动，避免武器抖动
-    // if (this._rightHandBone) {
-    //   this._rightHandBone.position.y += Math.sin(this._idleTime * 2) * 0.001
-    // }
+    // 平滑插值到目标偏移
+    this._currentOffsetX += (this._targetOffsetX - this._currentOffsetX) * this._swaySpeed * delta
+    this._currentOffsetY += (this._targetOffsetY - this._currentOffsetY) * this._swaySpeed * delta
+
+    // 应用偏移到武器位置
+    this._weaponNode.position.x = this._basePosition.x + this._currentOffsetX
+    this._weaponNode.position.y = this._basePosition.y + this._currentOffsetY
+
+    // 轻微倾斜效果（跟随偏移方向）
+    this._weaponNode.rotation.z = -this._currentOffsetX * 1.5
+    this._weaponNode.rotation.x = this._currentOffsetY * 1.5
+
+    // 轻微呼吸晃动
+    const breathX = Math.sin(this._idleTime * 1.5) * 0.003
+    const breathY = Math.cos(this._idleTime * 1.2) * 0.002
+    this._weaponNode.position.x += breathX
+    this._weaponNode.position.y += breathY
   }
 
   /**
-   * 激活右手显示
+   * 更新武器跟随 - 由鼠标移动调用
+   */
+  updateSway(deltaYaw: number, deltaPitch: number): void {
+    // 鼠标移动时设置目标偏移（反向，产生跟随效果）
+    this._targetOffsetX = -deltaYaw * this._swayAmount
+    this._targetOffsetY = deltaPitch * this._swayAmount
+
+    // 限制偏移范围
+    this._targetOffsetX = Math.max(-0.15, Math.min(0.15, this._targetOffsetX))
+    this._targetOffsetY = Math.max(-0.1, Math.min(0.1, this._targetOffsetY))
+  }
+
+  /**
+   * 重置武器跟随偏移（鼠标停止移动时）
+   */
+  resetSway(): void {
+    this._targetOffsetX = 0
+    this._targetOffsetY = 0
+  }
+
+  /**
+   * 激活武器显示
    */
   activate(): void {
     this._isActive = true
     this._idleTime = 0
-    if (this._root) {
-      this._root.setEnabled(true)
+    if (this._weaponNode) {
+      this._weaponNode.setEnabled(true)
     }
   }
 
   /**
-   * 停用右手显示
+   * 停用武器显示
    */
   deactivate(): void {
     this._isActive = false
-    if (this._root) {
-      this._root.setEnabled(false)
+    if (this._weaponNode) {
+      this._weaponNode.setEnabled(false)
     }
   }
 
@@ -181,106 +208,15 @@ export class RightHand {
     return this._weaponNode
   }
 
-  get rightHandBone(): TransformNode | null {
-    return this._rightHandBone
-  }
-
-  /**
-   * 查找右手骨骼
-   */
-  private _findRightHandBone(): TransformNode | null {
-    if (!this._root) return null
-
-    // 方法1：通过骨骼名称查找
-    for (const candidate of RIGHT_HAND_BONE_CANDIDATES) {
-      const bone = this._findNodeByName(this._root, candidate)
-      if (bone) return bone
-    }
-
-    // 方法2：遍历所有 TransformNode，找包含 "RightHand" 的
-    const nodes = this._root.getChildTransformNodes()
-    for (const node of nodes) {
-      const name = node.name.toLowerCase()
-      if (name.includes('righthand') && !name.includes('index') && !name.includes('middle') && !name.includes('pinky') && !name.includes('ring') && !name.includes('thumb')) {
-        return node
-      }
-    }
-
-    // 方法3：返回第一个包含 "hand" 的节点
-    for (const node of nodes) {
-      if (node.name.toLowerCase().includes('hand')) {
-        return node
-      }
-    }
-
-    console.warn('[RightHand] Could not find right hand bone, using fallback')
-    return null
-  }
-
-  /**
-   * 递归查找指定名称的节点
-   */
-  private _findNodeByName(root: TransformNode, name: string): TransformNode | null {
-    if (root.name === name) return root
-    for (const child of root.getChildTransformNodes()) {
-      const found = this._findNodeByName(child, name)
-      if (found) return found
-    }
-    return null
-  }
-
-  /**
-   * 隐藏身体，只保留右手区域
-   * 策略：隐藏所有 mesh，然后只显示右手附近的 mesh
-   */
-  private _hideBodyKeepRightHand(): void {
-    if (!this._root) return
-
-    const allMeshes = this._root.getChildMeshes()
-
-    // 先隐藏所有 mesh
-    for (const mesh of allMeshes) {
-      mesh.isVisible = false
-    }
-
-    // 找到右手骨骼的世界位置
-    const rightHandPos = this._rightHandBone
-      ? this._rightHandBone.getAbsolutePosition()
-      : new Vector3(0.5, 1, 0)
-
-    // 只显示右手附近的 mesh（距离 < 1.0 单位，稍微放宽范围）
-    for (const mesh of allMeshes) {
-      const meshPos = mesh.getAbsolutePosition()
-      const dist = Vector3.Distance(meshPos, rightHandPos)
-      if (dist < 1.0) {
-        mesh.isVisible = true
-      }
-    }
-
-    // 如果没有找到附近的 mesh，显示所有 mesh（fallback）
-    const visibleCount = allMeshes.filter(m => m.isVisible).length
-    if (visibleCount === 0) {
-      console.warn('[RightHand] No meshes near right hand, showing all')
-      for (const mesh of allMeshes) {
-        mesh.isVisible = true
-      }
-    }
-  }
-
   dispose(): void {
-    if (this._weaponNode) {
-      this._weaponNode.dispose()
-      this._weaponNode = null
-    }
     if (this._weaponModel) {
       this._weaponModel.dispose()
       this._weaponModel = null
     }
-    if (this._root) {
-      this._root.dispose()
-      this._root = null
+    if (this._weaponNode) {
+      this._weaponNode.dispose()
+      this._weaponNode = null
     }
-    this._rightHandBone = null
     this._isActive = false
   }
 }

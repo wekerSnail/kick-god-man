@@ -1,5 +1,9 @@
 import { Vector3, FreeCamera } from '@babylonjs/core'
 
+// 武器跟随回调类型
+type WeaponSwayCallback = (deltaYaw: number, deltaPitch: number) => void
+type WeaponResetSwayCallback = () => void
+
 /**
  * 彩蛋模式 FPS 相机控制器
  * 进入时切换为第一人称视角，鼠标控制朝向，退出时恢复原等距视角
@@ -16,9 +20,25 @@ export class FirstPersonCamera {
   private _pitch = 0 // 垂直旋转角
   private _sensitivity = 0.003 // 鼠标灵敏度
 
+  // 武器跟随回调
+  private _weaponSwayCallback: WeaponSwayCallback | null = null
+  private _weaponResetSwayCallback: WeaponResetSwayCallback | null = null
+  private _lastMouseMoveTime = 0
+
   constructor(camera: FreeCamera, canvas?: HTMLCanvasElement) {
     this._camera = camera
     this._canvas = canvas ?? null
+  }
+
+  /**
+   * 设置武器跟随回调
+   */
+  setWeaponSwayCallbacks(
+    onSway: WeaponSwayCallback,
+    onReset: WeaponResetSwayCallback
+  ): void {
+    this._weaponSwayCallback = onSway
+    this._weaponResetSwayCallback = onReset
   }
 
   /**
@@ -80,13 +100,22 @@ export class FirstPersonCamera {
   private _onMouseMove(e: MouseEvent): void {
     if (!this._isActive) return
 
-    this._yaw += e.movementX * this._sensitivity
-    this._pitch -= e.movementY * this._sensitivity
+    const deltaYaw = e.movementX * this._sensitivity
+    const deltaPitch = -e.movementY * this._sensitivity
+
+    this._yaw += deltaYaw
+    this._pitch += deltaPitch
 
     // 限制垂直视角
     this._pitch = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, this._pitch))
 
     this._applyCameraRotation()
+
+    // 通知武器跟随系统
+    if (this._weaponSwayCallback) {
+      this._weaponSwayCallback(deltaYaw, deltaPitch)
+    }
+    this._lastMouseMoveTime = Date.now()
   }
 
   /**
@@ -118,10 +147,13 @@ export class FirstPersonCamera {
   }
 
   /**
-   * 更新（保持相机位置固定，不需要每帧更新）
+   * 更新（检测鼠标停止移动，重置武器跟随）
    */
   update(_bossPosition: Vector3, _delta: number): void {
-    // 鼠标控制模式下不需要自动更新
+    // 鼠标停止移动超过 100ms 后，重置武器跟随
+    if (this._weaponResetSwayCallback && Date.now() - this._lastMouseMoveTime > 100) {
+      this._weaponResetSwayCallback()
+    }
   }
 
   /**

@@ -4,7 +4,8 @@ import {
   MeshBuilder,
   StandardMaterial,
   Color3,
-  Vector3
+  Vector3,
+  FreeCamera
 } from '@babylonjs/core'
 
 const HUD_WIDTH = 3
@@ -22,6 +23,11 @@ export class EasterEggHUD {
   private _material: StandardMaterial | null = null
   private _isActive = false
 
+  // 十字准星
+  private _crosshair: ReturnType<typeof MeshBuilder.CreatePlane> | null = null
+  private _crosshairTexture: DynamicTexture | null = null
+  private _crosshairMaterial: StandardMaterial | null = null
+
   constructor(scene: Scene) {
     this._scene = scene
   }
@@ -29,8 +35,9 @@ export class EasterEggHUD {
   /**
    * 创建 HUD
    * @param position HUD 位置（世界坐标）
+   * @param camera 相机引用（用于挂载准星）
    */
-  create(position: Vector3): void {
+  create(position: Vector3, camera?: FreeCamera): void {
     // 创建 Plane mesh
     this._plane = MeshBuilder.CreatePlane('easterHud', {
       width: HUD_WIDTH,
@@ -53,8 +60,99 @@ export class EasterEggHUD {
     this._material.backFaceCulling = false
     this._plane.material = this._material
 
+    // 创建十字准星
+    this._createCrosshair(camera)
+
     this._isActive = true
     this._updateDisplay(30)
+  }
+
+  /**
+   * 创建十字准星
+   */
+  private _createCrosshair(camera?: FreeCamera): void {
+    // 创建准星平面
+    this._crosshair = MeshBuilder.CreatePlane('crosshair', {
+      width: 0.08,
+      height: 0.08
+    }, this._scene)
+
+    // 挂载到相机，保持在屏幕中心
+    if (camera) {
+      this._crosshair.parent = camera
+      this._crosshair.position = new Vector3(0, 0, 1) // 相机前方 1 单位
+    }
+
+    // 创建准星纹理
+    this._crosshairTexture = new DynamicTexture('crosshairTex', {
+      width: 64,
+      height: 64
+    }, this._scene, false)
+
+    // 绘制十字准星
+    this._drawCrosshair()
+
+    // 创建材质
+    this._crosshairMaterial = new StandardMaterial('crosshairMat', this._scene)
+    this._crosshairMaterial.diffuseTexture = this._crosshairTexture
+    this._crosshairMaterial.emissiveColor = new Color3(0, 1, 0) // 绿色
+    this._crosshairMaterial.disableLighting = true
+    this._crosshairMaterial.backFaceCulling = false
+    this._crosshairMaterial.useAlphaFromDiffuseTexture = true
+    this._crosshair.material = this._crosshairMaterial
+  }
+
+  /**
+   * 绘制十字准星图案
+   */
+  private _drawCrosshair(): void {
+    if (!this._crosshairTexture) return
+
+    const ctx = this._crosshairTexture.getContext()
+    const size = 64
+    const center = size / 2
+    const lineWidth = 2
+    const lineLength = 12
+    const gap = 4
+
+    // 清空（完全透明背景）
+    ctx.clearRect(0, 0, size, size)
+
+    // 绘制十字准星（亮绿色）
+    ctx.strokeStyle = '#00FF00'
+    ctx.lineWidth = lineWidth
+
+    // 上
+    ctx.beginPath()
+    ctx.moveTo(center, center - gap - lineLength)
+    ctx.lineTo(center, center - gap)
+    ctx.stroke()
+
+    // 下
+    ctx.beginPath()
+    ctx.moveTo(center, center + gap)
+    ctx.lineTo(center, center + gap + lineLength)
+    ctx.stroke()
+
+    // 左
+    ctx.beginPath()
+    ctx.moveTo(center - gap - lineLength, center)
+    ctx.lineTo(center - gap, center)
+    ctx.stroke()
+
+    // 右
+    ctx.beginPath()
+    ctx.moveTo(center + gap, center)
+    ctx.lineTo(center + gap + lineLength, center)
+    ctx.stroke()
+
+    // 中心点（小圆点）
+    ctx.fillStyle = '#00FF00'
+    ctx.beginPath()
+    ctx.arc(center, center, 1.5, 0, Math.PI * 2)
+    ctx.fill()
+
+    this._crosshairTexture.update()
   }
 
   /**
@@ -122,6 +220,18 @@ export class EasterEggHUD {
     if (this._material) {
       this._material.dispose()
       this._material = null
+    }
+    if (this._crosshair) {
+      this._crosshair.dispose()
+      this._crosshair = null
+    }
+    if (this._crosshairTexture) {
+      this._crosshairTexture.dispose()
+      this._crosshairTexture = null
+    }
+    if (this._crosshairMaterial) {
+      this._crosshairMaterial.dispose()
+      this._crosshairMaterial = null
     }
   }
 }
