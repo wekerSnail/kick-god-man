@@ -43,7 +43,10 @@
           <span class="score-block__label">踹击数</span>
           <span class="score-block__value">{{ kickCount }}</span>
         </div>
-        <button class="btn" @click="$emit('nextLevel')">进入第 {{ transitionLevel + 1 }} 关 🚀</button>
+        <div class="transition-buttons">
+          <button class="btn" @click="$emit('nextLevel')">进入第 {{ transitionLevel + 1 }} 关 🚀</button>
+          <button class="btn btn--easter" @click="$emit('easterEgg')">奖励神人 🎁</button>
+        </div>
       </article>
     </div>
   </Transition>
@@ -83,6 +86,7 @@ defineEmits<{
   start: []
   restart: []
   nextLevel: []
+  easterEgg: []
 }>()
 </script>
 
@@ -236,6 +240,24 @@ defineEmits<{
   backdrop-filter: blur(8px);
   flex-direction: column;
   gap: var(--sp-5);
+}
+
+.transition-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  width: 100%;
+}
+
+.btn--easter {
+  background: linear-gradient(135deg, #FFB347, #FF6B6B);
+  box-shadow: 0 4px 20px rgba(255, 107, 107, 0.3);
+}
+.btn--easter:hover {
+  box-shadow: 0 6px 28px rgba(255, 107, 107, 0.4);
+}
+.btn--easter:active {
+  box-shadow: 0 2px 10px rgba(255, 107, 107, 0.2);
 }
 .pass-badge {
   width: 240px;

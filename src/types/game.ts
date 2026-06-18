@@ -194,3 +194,73 @@ export const HIDING_SPOTS: HidingSpot[] = [
     name: '沙发'
   }
 ]
+
+// ==================== 彩蛋模式（奖励神人）====================
+
+export type EasterEggWeaponType = 'gun' | 'rocket' | 'grenade'
+
+export interface EasterEggWeaponConfig {
+  type: EasterEggWeaponType
+  name: string
+  glbFile: string
+  damage: number
+  fireRate: number         // 发/秒（枪连射间隔）
+  projectileSpeed: number  // 单位/秒
+  stunDuration: number     // 眩晕秒数（0=不眩晕，仅抖动）
+}
+
+export const EASTER_EGG_WEAPONS: readonly EasterEggWeaponConfig[] = [
+  {
+    type: 'gun',
+    name: '激光枪',
+    glbFile: 'blaster-a.glb',
+    damage: 1,
+    fireRate: 5,
+    projectileSpeed: 50,
+    stunDuration: 0
+  },
+  {
+    type: 'rocket',
+    name: '火箭炮',
+    glbFile: 'scope-large-a.glb',
+    damage: 3,
+    fireRate: 0.5,
+    projectileSpeed: 30,
+    stunDuration: 3
+  },
+  {
+    type: 'grenade',
+    name: '手榴弹',
+    glbFile: 'grenade-a.glb',
+    damage: 2,
+    fireRate: 0.8,
+    projectileSpeed: 15,
+    stunDuration: 3
+  }
+] as const
+
+export const EASTER_EGG_DIALOGUES: readonly string[] = [
+  '这需求不合理！',
+  '我要找 PM 理论！',
+  '这 bug 不是我写的！',
+  '让我先喝杯咖啡...',
+  '能不能先对齐一下？',
+  '这个排期太紧了！',
+  '我要请假！',
+  '别打了，我认输还不行吗！',
+  '你怎么不按套路出牌？',
+  '我去找领导反映！',
+  '这锅我不背！',
+  '你是不是对需求有误解？',
+  '我今天心情好，不跟你计较！',
+  '等我写完这个 PR 再说...',
+  '你再打我我就报警了！'
+] as const
+
+export interface EasterEggState {
+  isActive: boolean
+  timeRemaining: number
+  currentWeaponType: EasterEggWeaponType
+  bossShaking: boolean
+  bossStunned: boolean
+}

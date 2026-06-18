@@ -64,6 +64,8 @@ export class GameLoop {
   private canvas: HTMLCanvasElement | null = null
   private easterEggMode: EasterEggMode | null = null
   private isEasterEgg = false
+  private _easterFireStart: (() => void) | null = null
+  private _easterFireStop: (() => void) | null = null
 
   constructor(container: HTMLElement, onStateChange: (state: any) => void) {
     this.onStateChange = onStateChange
@@ -534,18 +536,33 @@ export class GameLoop {
     return this.isWin
   }
 
-  startEasterEgg(onComplete?: () => void): void {
+  async startEasterEgg(onComplete?: () => void): Promise<void> {
     this.isEasterEgg = true
     this.easterEggMode = new EasterEggMode()
-    this.easterEggMode.init(this.scene, this.assetManager, this.enemy)
-    this.easterEggMode.start(() => {
+    this.easterEggMode.init(this.scene, this.assetManager, this.enemy, this.camera)
+    await this.easterEggMode.start(() => {
       this.stopEasterEgg()
       onComplete?.()
     })
+
+    // 注册射击输入
+    this._easterFireStart = () => this.easterEggMode?.onFireStart()
+    this._easterFireStop = () => this.easterEggMode?.onFireStop()
+    this.canvas?.addEventListener('mousedown', this._easterFireStart)
+    this.canvas?.addEventListener('mouseup', this._easterFireStop)
   }
 
   stopEasterEgg(): void {
-    this.easterEggMode?.stop()
+    // 移除射击输入
+    if (this._easterFireStart) {
+      this.canvas?.removeEventListener('mousedown', this._easterFireStart)
+      this._easterFireStart = null
+    }
+    if (this._easterFireStop) {
+      this.canvas?.removeEventListener('mouseup', this._easterFireStop)
+      this._easterFireStop = null
+    }
+    this.easterEggMode?.dispose()
     this.easterEggMode = null
     this.isEasterEgg = false
   }

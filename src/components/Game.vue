@@ -52,6 +52,7 @@
       @start="startGame"
       @restart="restartGame"
       @nextLevel="nextLevel"
+      @easter-egg="startEasterEgg"
     />
   </div>
 </template>
@@ -95,6 +96,9 @@ const DEFAULT_STATE = () => ({
   comboActive: false,
   invisibleActive: false,
   isPatrolWarning: false,
+  isEasterEgg: false,
+  easterEggTimeRemaining: 0,
+  easterEggWeaponType: null as string | null,
 })
 
 const gameState = ref(DEFAULT_STATE())
@@ -102,6 +106,7 @@ const gameState = ref(DEFAULT_STATE())
 // 当前应显示的 overlay：start / transition / gameover / none
 const overlayScreen = computed<'start' | 'transition' | 'gameover' | 'none'>(() => {
   if (!gameStarted.value) return 'start'
+  if (gameState.value.isEasterEgg) return 'none'
   if (gameState.value.isGameOver) return 'gameover'
   if (gameState.value.isLevelTransition) return 'transition'
   return 'none'
@@ -159,6 +164,13 @@ const nextLevel = () => {
 
 const useProp = (index: number) => {
   gameLoop?.useProp(index)
+}
+
+const startEasterEgg = () => {
+  gameLoop?.startEasterEgg(() => {
+    // 彩蛋模式结束，恢复过渡画面状态
+    gameState.value.isLevelTransition = true
+  })
 }
 
 const handleKeyDown = (e: KeyboardEvent) => {
