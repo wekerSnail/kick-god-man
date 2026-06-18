@@ -180,6 +180,8 @@ export class GameLoop {
             }
           }
         }
+      } else if (this.enemy.isLookingBack()) {
+        // 回头期间：不立即扣血，由 LookingBackState 对话结束后判定
       } else {
         if (this.player.isInvisible()) {
           // invisible: no damage
@@ -199,6 +201,17 @@ export class GameLoop {
           }
         }
       }
+    }
+
+    if (this.enemy.isLookingBack()) {
+      const dist = Vector3.Distance(this.player.getPosition(), this.enemy.getPosition())
+      if (dist < 6) {
+        this.enemy.setLookBackDetected(true)
+      }
+    }
+
+    if (this.enemy.consumeLookBackGameOver()) {
+      this.gameOver(false)
     }
 
     if ((this.player.getIsKicking() || this.player.getIsSwinging()) && !this.levelManager.getIsTransitioning()) {

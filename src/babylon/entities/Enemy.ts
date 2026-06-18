@@ -47,6 +47,8 @@ export class Enemy {
   private dialogueDynamicTexture: DynamicTexture | null = null
   private _playerDetectedDuringAttack: boolean = false
   private _playerUsingKeyboardDuringAttack: boolean = false
+  private _playerDetectedInLookBack: boolean = false
+  private _lookBackGameOverPending: boolean = false
 
   constructor(
     scene: Scene,
@@ -241,10 +243,21 @@ export class Enemy {
   }
 
   checkPlayerDetection(): boolean {
-    return false
+    return this._playerDetectedInLookBack
   }
 
   reportPlayerDetected(): void {
+    this._lookBackGameOverPending = true
+  }
+
+  setLookBackDetected(detected: boolean): void {
+    this._playerDetectedInLookBack = detected
+  }
+
+  consumeLookBackGameOver(): boolean {
+    const result = this._lookBackGameOverPending
+    this._lookBackGameOverPending = false
+    return result
   }
 
   showStunIndicator(show: boolean): void {
