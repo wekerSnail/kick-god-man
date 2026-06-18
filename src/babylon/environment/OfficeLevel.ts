@@ -160,7 +160,7 @@ export class OfficeLevel {
     }
 
     const chair = await this.assetManager.loadProp('chair', chairUrl)
-    const chairPlaced = this.placeProp(chair, deskParent, new Vector3(0, 0, -5.8), 0, 1.4)
+    const chairPlaced = this.placeProp(chair, deskParent, new Vector3(0, 0, -5.8), Math.PI, 1.4)
     if (!chairPlaced) {
       this.fallbackChair(deskParent, new Vector3(0, 0, -5.8))
     }

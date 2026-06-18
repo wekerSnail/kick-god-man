@@ -57,7 +57,7 @@ export class Enemy {
     _shadowGen: ShadowGenerator
   ) {
     this.scene = scene
-    this.position = new Vector3(0, 0, -8.8)
+    this.position = new Vector3(0, 0, -5.8)
     this.originalPosition = this.position.clone()
     this.mesh = new TransformNode('enemy', this.scene)
     this.characterGroup = new TransformNode('character', this.scene)
