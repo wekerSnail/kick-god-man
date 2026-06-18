@@ -565,6 +565,9 @@ export class GameLoop {
     this.easterEggMode?.dispose()
     this.easterEggMode = null
     this.isEasterEgg = false
+
+    // 重置敌人检测状态，避免彩蛋模式结束后立即触发游戏结束
+    this.enemy.setLookBackDetected(false)
   }
 
   private createVictoryParticles(): void {
