@@ -12,13 +12,18 @@ import type { AssetManager } from '../core/AssetManager'
 import { StateMachine } from '../core/StateMachine'
 import { NormalState } from '../state/EnemyStates'
 
+const characterModelUrl = `${import.meta.env.BASE_URL}models/characters/boss.glb`
+
 export class Enemy {
   private mesh: TransformNode
   private characterGroup: TransformNode
+  private modelRoot: TransformNode | null = null
   private position: Vector3
   private originalPosition: Vector3
   private scene: Scene
   private animationGroups: AnimationGroup[] = []
+  private isWalking: boolean = false
+  private currentAnimName: string = ''
 
   private stateMachine: StateMachine<Enemy>
   private _nextLookBackTime: number = 8
@@ -39,7 +44,7 @@ export class Enemy {
     _shadowGen: ShadowGenerator
   ) {
     this.scene = scene
-    this.position = new Vector3(0, 0, -10)
+    this.position = new Vector3(0, 0, -8.8)
     this.originalPosition = this.position.clone()
     this.mesh = new TransformNode('enemy', this.scene)
     this.characterGroup = new TransformNode('character', this.scene)
@@ -55,19 +60,33 @@ export class Enemy {
   private async loadModel(assetManager: AssetManager): Promise<void> {
     const result = await assetManager.loadCharacter(
       'enemy',
-      '/src/assets/kenney_mini-characters/Models/GLB format/character-male-c.glb'
+      characterModelUrl
     )
 
     const root = result.root
     root.parent = this.characterGroup
+    this.modelRoot = root
     this.animationGroups = result.animationGroups
 
-    const boundingInfo = root.getBoundingInfo()
-    const height = boundingInfo.boundingBox.extendSizeWorld.y * 2
-    const scale = 1.8 / height
-    root.scaling = new Vector3(scale, scale, scale)
+    root.rotation.x = -Math.PI / 2
+
+    const childMeshes = root.getChildMeshes()
+    if (childMeshes.length > 0) {
+      let minY = Infinity
+      let maxY = -Infinity
+      childMeshes.forEach(m => {
+        m.computeWorldMatrix(true)
+        const bi = m.getBoundingInfo()
+        minY = Math.min(minY, bi.boundingBox.minimumWorld.y)
+        maxY = Math.max(maxY, bi.boundingBox.maximumWorld.y)
+      })
+      const height = Math.max(0.001, maxY - minY)
+      const scale = 1.8 / height
+      root.scaling = new Vector3(scale, scale, scale)
+    }
 
     this.mesh.position = this.position.clone()
+    this.mesh.rotation.y = Math.PI
   }
 
   private setupPatrolWaypoints(): void {
@@ -83,15 +102,20 @@ export class Enemy {
 
   update(delta: number, _playerPosition: Vector3, _playerIsInvisible: boolean): void {
     this.stateMachine.update(delta)
-    this.updateAnimations(delta)
+    this.updateWalkAnimation(delta)
   }
 
-  private updateAnimations(_delta: number): void {
-    this.animationGroups.forEach(ag => {
-      if (ag.isPlaying) {
-        ag.start()
-      }
-    })
+  private playAnimation(name: string, loop: boolean = true): void {
+    if (this.currentAnimName === name) return
+    this.currentAnimName = name
+    this.animationGroups.forEach(ag => ag.stop())
+    const anim = this.animationGroups.find(ag =>
+      ag.name.toLowerCase().includes(name.toLowerCase())
+    )
+    if (anim) {
+      anim.loopAnimation = loop
+      anim.start()
+    }
   }
 
   scheduleNextLookBack(): void {
@@ -180,6 +204,7 @@ export class Enemy {
 
   moveAlongPatrol(dt: number, speed: number): boolean {
     if (this.currentWaypointIndex >= this.patrolWaypoints.length) {
+      this.isWalking = false
       return true
     }
 
@@ -190,11 +215,13 @@ export class Enemy {
     if (distance < 0.5) {
       this.currentWaypointIndex++
       if (this.currentWaypointIndex >= this.patrolWaypoints.length) {
+        this.isWalking = false
         return true
       }
       return false
     }
 
+    this.isWalking = true
     direction.normalize()
     this.position.addInPlace(direction.scaleInPlace(speed * dt))
     this.mesh.position = this.position.clone()
@@ -215,9 +242,11 @@ export class Enemy {
     if (distance < 0.5) {
       this.position = this.originalPosition.clone()
       this.mesh.position = this.position.clone()
+      this.isWalking = false
       return true
     }
 
+    this.isWalking = true
     direction.normalize()
     this.position.addInPlace(direction.scaleInPlace(speed * dt))
     this.mesh.position = this.position.clone()
@@ -229,6 +258,16 @@ export class Enemy {
     this.mesh.rotation.y += normalizedDiff * 10 * dt
 
     return false
+  }
+
+  updateWalkAnimation(_delta: number): void {
+    if (!this.modelRoot) return
+
+    if (this.isWalking) {
+      this.playAnimation('Walk')
+    } else {
+      this.playAnimation('Idle')
+    }
   }
 
   checkPatrolDetection(_range: number, _halfAngle: number): boolean {

@@ -314,7 +314,6 @@ export class GameLoop {
       level: this.levelManager.getLevel(),
       kickTarget: this.levelManager.getKickTarget(),
       isLevelTransition: this.levelManager.getIsTransitioning(),
-      levelTransitionTimer: this.levelManager.getTransitionTimer(),
       equippedWeapon: this.player.getEquippedWeapon(),
       isChargingThrow: this.player.isCharging(),
       attackCooldown: this.player.getAttackCooldown(),
@@ -462,5 +461,11 @@ export class GameLoop {
     this.kickCounted = false
     this.levelManager.reset()
     this.start()
+  }
+
+  completeLevelTransition(): void {
+    this.levelManager.completeTransition()
+    this.kickCount = 0
+    this.kickCounted = false
   }
 }

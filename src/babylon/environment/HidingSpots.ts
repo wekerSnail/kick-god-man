@@ -5,14 +5,15 @@ import {
   Color3,
   MeshBuilder,
   PBRMaterial,
-  ShadowGenerator,
-  Mesh
+  ShadowGenerator
 } from '@babylonjs/core'
 import type { AssetManager } from '../core/AssetManager'
 import type { HidingSpot } from '../../types/game'
 import { HIDING_SPOTS } from '../../types/game'
 
-const FURNITURE_BASE = '/src/assets/kenney_furniture-kit/Models/GLB format'
+import pottedPlantUrl from '../../assets/kenney_furniture-kit/Models/GLTF format/pottedPlant.glb?url'
+import bookcaseClosedDoorsUrl from '../../assets/kenney_furniture-kit/Models/GLTF format/bookcaseClosedDoors.glb?url'
+import loungeSofaUrl from '../../assets/kenney_furniture-kit/Models/GLTF format/loungeSofa.glb?url'
 
 /**
  * 躲藏点：盆栽 / 文件柜 / 沙发。
@@ -54,17 +55,33 @@ export class HidingSpots {
     }
   }
 
-  private placeProp(prop: Mesh, parent: TransformNode, targetHeight: number): boolean {
+  private placeProp(prop: TransformNode, parent: TransformNode, targetHeight: number): boolean {
     const childMeshes = prop.getChildMeshes()
     if (childMeshes.length === 0) return false
-    prop.refreshBoundingInfo(true)
-    const info = prop.getBoundingInfo()
-    const minY = info.boundingBox.minimumWorld.y
-    const height = Math.max(0.001, info.boundingBox.maximumWorld.y - minY)
+
+    let minY = Infinity
+    let maxY = -Infinity
+    let minX = Infinity
+    let maxX = -Infinity
+    let minZ = Infinity
+    let maxZ = -Infinity
+    childMeshes.forEach(m => {
+      m.computeWorldMatrix(true)
+      const bi = m.getBoundingInfo()
+      minY = Math.min(minY, bi.boundingBox.minimumWorld.y)
+      maxY = Math.max(maxY, bi.boundingBox.maximumWorld.y)
+      minX = Math.min(minX, bi.boundingBox.minimumWorld.x)
+      maxX = Math.max(maxX, bi.boundingBox.maximumWorld.x)
+      minZ = Math.min(minZ, bi.boundingBox.minimumWorld.z)
+      maxZ = Math.max(maxZ, bi.boundingBox.maximumWorld.z)
+    })
+    const height = Math.max(0.001, maxY - minY)
     const scale = targetHeight / height
+    const centerX = (minX + maxX) / 2
+    const centerZ = (minZ + maxZ) / 2
     prop.parent = parent
     prop.scaling = new Vector3(scale, scale, scale)
-    prop.position.y = -minY * scale
+    prop.position = new Vector3(-centerX * scale, -minY * scale, -centerZ * scale)
     childMeshes.forEach(m => {
       m.receiveShadows = true
       this.shadowGen.addShadowCaster(m)
@@ -73,7 +90,7 @@ export class HidingSpots {
   }
 
   private async createPlant(parent: TransformNode): Promise<void> {
-    const model = await this.assetManager.loadProp('pottedPlant', `${FURNITURE_BASE}/pottedPlant.glb`)
+    const model = await this.assetManager.loadProp('pottedPlant', pottedPlantUrl)
     const placed = this.placeProp(model, parent, 1.8)
     if (!placed) {
       this.fallbackPlant(parent)
@@ -81,7 +98,7 @@ export class HidingSpots {
   }
 
   private async createCabinet(parent: TransformNode): Promise<void> {
-    const model = await this.assetManager.loadProp('bookcaseClosedDoors', `${FURNITURE_BASE}/bookcaseClosedDoors.glb`)
+    const model = await this.assetManager.loadProp('bookcaseClosedDoors', bookcaseClosedDoorsUrl)
     const placed = this.placeProp(model, parent, 2.4)
     if (!placed) {
       this.fallbackCabinet(parent)
@@ -89,7 +106,7 @@ export class HidingSpots {
   }
 
   private async createSofa(parent: TransformNode): Promise<void> {
-    const model = await this.assetManager.loadProp('loungeSofa', `${FURNITURE_BASE}/loungeSofa.glb`)
+    const model = await this.assetManager.loadProp('loungeSofa', loungeSofaUrl)
     const placed = this.placeProp(model, parent, 1.1)
     if (!placed) {
       this.fallbackSofa(parent)

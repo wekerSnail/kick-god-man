@@ -51,6 +51,7 @@
       :transition-level="gameState.level"
       @start="startGame"
       @restart="restartGame"
+      @nextLevel="nextLevel"
     />
   </div>
 </template>
@@ -143,13 +144,17 @@ const restartGame = () => {
   }
   gameState.value = DEFAULT_STATE()
   gameStarted.value = false
-  // 等待 canvas 清空后重新初始化
   window.setTimeout(async () => {
     gameStarted.value = true
     attachLoop()
     await gameLoop!.init()
     gameLoop!.start()
   }, 100)
+}
+
+const nextLevel = () => {
+  gameState.value.isLevelTransition = false
+  gameLoop?.completeLevelTransition()
 }
 
 const useProp = (index: number) => {

@@ -5,18 +5,16 @@ import {
   MeshBuilder,
   PBRMaterial,
   ShadowGenerator,
-  TransformNode,
-  Mesh
+  TransformNode
 } from '@babylonjs/core'
 import type { AssetManager } from '../core/AssetManager'
 
-/**
- * 办公室关卡：地板、墙壁、神人办公工位（卡通休闲风格）。
- *
- * 家具优先加载 Kenney furniture-kit 的真实 GLB 模型；若加载失败则回退到
- * 明亮鲜艳的程序化几何体。
- */
-const FURNITURE_BASE = '/src/assets/kenney_furniture-kit/Models/GLB format'
+import deskUrl from '../../assets/kenney_furniture-kit/Models/GLTF format/desk.glb?url'
+import chairUrl from '../../assets/kenney_furniture-kit/Models/GLTF format/chair.glb?url'
+import plantSmall1Url from '../../assets/kenney_furniture-kit/Models/GLTF format/plantSmall1.glb?url'
+import bookcaseClosedUrl from '../../assets/kenney_furniture-kit/Models/GLTF format/bookcaseClosed.glb?url'
+import lampSquareCeilingUrl from '../../assets/kenney_furniture-kit/Models/GLTF format/lampSquareCeiling.glb?url'
+import rugRectangleUrl from '../../assets/kenney_furniture-kit/Models/GLTF format/rugRectangle.glb?url'
 
 export class OfficeLevel {
   private scene: Scene
@@ -120,7 +118,7 @@ export class OfficeLevel {
    * 返回 false 表示没有有效子网格（加载失败），调用方可据此走回退分支。
    */
   private placeProp(
-    prop: Mesh,
+    prop: TransformNode,
     parent: TransformNode,
     position: Vector3,
     rotationY: number,
@@ -129,18 +127,30 @@ export class OfficeLevel {
     const childMeshes = prop.getChildMeshes()
     if (childMeshes.length === 0) return false
 
-    // 重新计算包围盒并按目标高度缩放
-    prop.refreshBoundingInfo(true)
-    const info = prop.getBoundingInfo()
-    const minY = info.boundingBox.minimumWorld.y
-    const maxY = info.boundingBox.maximumWorld.y
+    let minY = Infinity
+    let maxY = -Infinity
+    let minX = Infinity
+    let maxX = -Infinity
+    let minZ = Infinity
+    let maxZ = -Infinity
+    childMeshes.forEach(m => {
+      m.computeWorldMatrix(true)
+      const bi = m.getBoundingInfo()
+      minY = Math.min(minY, bi.boundingBox.minimumWorld.y)
+      maxY = Math.max(maxY, bi.boundingBox.maximumWorld.y)
+      minX = Math.min(minX, bi.boundingBox.minimumWorld.x)
+      maxX = Math.max(maxX, bi.boundingBox.maximumWorld.x)
+      minZ = Math.min(minZ, bi.boundingBox.minimumWorld.z)
+      maxZ = Math.max(maxZ, bi.boundingBox.maximumWorld.z)
+    })
     const height = Math.max(0.001, maxY - minY)
     const scale = targetHeight / height
+    const centerX = (minX + maxX) / 2
+    const centerZ = (minZ + maxZ) / 2
 
     prop.parent = parent
     prop.scaling = new Vector3(scale, scale, scale)
-    // 贴地：缩放后把最低点放到 y=0
-    prop.position = new Vector3(position.x, -minY * scale, position.z)
+    prop.position = new Vector3(position.x - centerX * scale, -minY * scale, position.z - centerZ * scale)
     prop.rotation.y = rotationY
 
     childMeshes.forEach(m => {
@@ -155,64 +165,66 @@ export class OfficeLevel {
     deskParent.parent = this.furniture
 
     // —— 办公桌 ——
-    const desk = await this.assetManager.loadProp('desk', `${FURNITURE_BASE}/desk.glb`)
-    const deskPlaced = this.placeProp(desk, deskParent, new Vector3(0, 0, -10), Math.PI, 0.75)
+    const desk = await this.assetManager.loadProp('desk', deskUrl)
+    const deskPlaced = this.placeProp(desk, deskParent, new Vector3(0, 0, -10), 0, 1.2)
     if (!deskPlaced) {
       this.fallbackDesk(deskParent, new Vector3(0, 0, -10))
     }
 
-    // —— 办公椅（神人座椅，放在桌前 -z 侧）——
-    const chair = await this.assetManager.loadProp('chairDesk', `${FURNITURE_BASE}/chairDesk.glb`)
-    const chairPlaced = this.placeProp(chair, deskParent, new Vector3(0, 0, -8.8), Math.PI, 1.1)
+    // —— 办公椅（神人座椅，放在桌后 +z 侧，老板坐的位置）——
+    const chair = await this.assetManager.loadProp('chair', chairUrl)
+    const chairPlaced = this.placeProp(chair, deskParent, new Vector3(0, 0, -8.8), 0, 1.4)
     if (!chairPlaced) {
       this.fallbackChair(deskParent, new Vector3(0, 0, -8.8))
     }
 
-    // —— 显示器（放在桌上）——
-    const screen = await this.assetManager.loadProp('computerScreen', `${FURNITURE_BASE}/computerScreen.glb`)
-    const screenPlaced = this.placeProp(screen, deskParent, new Vector3(0, 0, -10), Math.PI, 0.55)
+    // —— 显示器（放在桌上，靠墙 -z 侧）——
+    const screenUrl = `${import.meta.env.BASE_URL}models/computer.glb`
+    const screen = await this.assetManager.loadProp('computerScreen', screenUrl)
+    const screenPlaced = this.placeProp(screen, deskParent, new Vector3(0, 0, -10.5), Math.PI, 0.5)
     if (screenPlaced) {
-      // 把显示器抬到桌面之上
-      screen.position.y += 0.78
+      screen.position.y += 1.25
+      screen.position.x = 0
     } else {
-      this.fallbackScreen(deskParent, new Vector3(0, 0, -10))
+      this.fallbackScreen(deskParent, new Vector3(0, 0, -10.5))
     }
 
     // —— 键盘（放在桌上，显示器前方）——
-    const keyboard = await this.assetManager.loadProp('computerKeyboard', `${FURNITURE_BASE}/computerKeyboard.glb`)
-    const keyboardPlaced = this.placeProp(keyboard, deskParent, new Vector3(0, 0, -9.5), Math.PI, 0.12)
+    const keyboardUrl = `${import.meta.env.BASE_URL}models/Keyboard.glb`
+    const keyboard = await this.assetManager.loadProp('computerKeyboard', keyboardUrl)
+    const keyboardPlaced = this.placeProp(keyboard, deskParent, new Vector3(0, 0, -9.8), Math.PI, 0.027)
     if (keyboardPlaced) {
-      keyboard.position.y += 0.78
+      keyboard.position.y += 1.25
+      keyboard.position.x = 0
     } else {
-      this.fallbackKeyboard(deskParent, new Vector3(0, 0, -9.5))
+      this.fallbackKeyboard(deskParent, new Vector3(0, 0, -9.8))
     }
 
     // —— 桌上小盆栽（点缀）——
-    const deskPlant = await this.assetManager.loadProp('plantSmall1', `${FURNITURE_BASE}/plantSmall1.glb`)
-    const deskPlantPlaced = this.placeProp(deskPlant, deskParent, new Vector3(0.8, 0, -10.3), Math.PI, 0.35)
+    const deskPlant = await this.assetManager.loadProp('plantSmall1', plantSmall1Url)
+    const deskPlantPlaced = this.placeProp(deskPlant, deskParent, new Vector3(0.8, 0, -10.3), 0, 0.35)
     if (deskPlantPlaced) {
-      deskPlant.position.y += 0.78
+      deskPlant.position.y += 1.25
     }
 
     // —— 书架（靠墙，作为办公区背景）——
-    const bookcase = await this.assetManager.loadProp('bookcaseClosed', `${FURNITURE_BASE}/bookcaseClosed.glb`)
+    const bookcase = await this.assetManager.loadProp('bookcaseClosed', bookcaseClosedUrl)
     const bookcasePlaced = this.placeProp(bookcase, deskParent, new Vector3(-3, 0, -14.2), 0, 2.2)
     if (!bookcasePlaced) {
       this.fallbackBookcase(deskParent, new Vector3(-3, 0, -14.2))
     }
 
     // —— 吊灯（视觉点缀，挂在上方）——
-    const lamp = await this.assetManager.loadProp('lampSquareCeiling', `${FURNITURE_BASE}/lampSquareCeiling.glb`)
+    const lamp = await this.assetManager.loadProp('lampSquareCeiling', lampSquareCeilingUrl)
     const lampPlaced = this.placeProp(lamp, deskParent, new Vector3(0, 0, -10), Math.PI, 0.5)
     if (lampPlaced) {
       lamp.position.y = 7.5
     }
 
     // —— 地毯（办公区下方）——
-    const rug = await this.assetManager.loadProp('rugRectangle', `${FURNITURE_BASE}/rugRectangle.glb`)
+    const rug = await this.assetManager.loadProp('rugRectangle', rugRectangleUrl)
     const rugPlaced = this.placeProp(rug, deskParent, new Vector3(0, 0, -9.5), 0, 0.02)
     if (!rugPlaced) {
-      // 地毯很薄，回退也做一个浅色平面
       const rugMesh = MeshBuilder.CreateBox('fallbackRug', {
         width: 3.5,
         height: 0.02,
@@ -236,27 +248,27 @@ export class OfficeLevel {
     deskMat.metallic = 0.0
 
     const top = MeshBuilder.CreateBox('fallbackDeskTop', {
-      width: 2.0,
-      height: 0.08,
-      depth: 1.2
+      width: 2.4,
+      height: 0.1,
+      depth: 1.4
     }, this.scene)
-    top.position = new Vector3(pos.x, 0.75, pos.z)
+    top.position = new Vector3(pos.x, 1.2, pos.z)
     top.parent = parent
     top.material = deskMat
     top.receiveShadows = true
     this.shadowGen.addShadowCaster(top)
 
     const legPos = [
-      new Vector3(pos.x - 0.9, 0.375, pos.z - 0.5),
-      new Vector3(pos.x + 0.9, 0.375, pos.z - 0.5),
-      new Vector3(pos.x - 0.9, 0.375, pos.z + 0.5),
-      new Vector3(pos.x + 0.9, 0.375, pos.z + 0.5)
+      new Vector3(pos.x - 1.1, 0.6, pos.z - 0.6),
+      new Vector3(pos.x + 1.1, 0.6, pos.z - 0.6),
+      new Vector3(pos.x - 1.1, 0.6, pos.z + 0.6),
+      new Vector3(pos.x + 1.1, 0.6, pos.z + 0.6)
     ]
     legPos.forEach((p, i) => {
       const leg = MeshBuilder.CreateBox(`fallbackDeskLeg_${i}`, {
-        width: 0.08,
-        height: 0.75,
-        depth: 0.08
+        width: 0.1,
+        height: 1.2,
+        depth: 0.1
       }, this.scene)
       leg.position = p
       leg.parent = parent
@@ -282,7 +294,7 @@ export class OfficeLevel {
       height: 0.6,
       depth: 0.06
     }, this.scene)
-    back.position = new Vector3(pos.x, 0.88, pos.z + 0.25)
+    back.position = new Vector3(pos.x, 0.88, pos.z - 0.25)
     back.parent = parent
     back.material = mat
   }
@@ -297,15 +309,14 @@ export class OfficeLevel {
       height: 0.5,
       depth: 0.04
     }, this.scene)
-    screen.position = new Vector3(pos.x, 1.45, pos.z)
+    screen.position = new Vector3(pos.x, 1.75, pos.z)
     screen.parent = parent
     screen.material = frame
-    // 亮屏（发光）作为点缀，避免桌面发暗
     const panel = MeshBuilder.CreatePlane('fallbackScreenPanel', {
       width: 0.8,
       height: 0.45
     }, this.scene)
-    panel.position = new Vector3(pos.x, 1.45, pos.z - 0.025)
+    panel.position = new Vector3(pos.x, 1.75, pos.z - 0.025)
     panel.parent = parent
     const panelMat = new PBRMaterial('fallbackScreenPanelMat', this.scene)
     panelMat.albedoColor = Color3.FromHexString('#1A3A5A')
@@ -323,7 +334,7 @@ export class OfficeLevel {
       height: 0.02,
       depth: 0.18
     }, this.scene)
-    kb.position = new Vector3(pos.x, 0.8, pos.z)
+    kb.position = new Vector3(pos.x, 1.25, pos.z)
     kb.parent = parent
     kb.material = mat
   }

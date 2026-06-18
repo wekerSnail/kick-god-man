@@ -11,8 +11,11 @@ import type { AssetManager } from '../core/AssetManager'
 import type { WeaponConfig } from '../../types/game'
 import { createWeaponMesh } from '../weapons/WeaponModels'
 
+const characterModelUrl = `${import.meta.env.BASE_URL}models/characters/player.glb`
+
 export class Player {
   private mesh: TransformNode
+  private modelRoot: TransformNode | null = null
   private position: Vector3
   private speed: number = 5
   private kickCooldown: number = 0
@@ -39,6 +42,7 @@ export class Player {
   private throwChargeSpeed: number = 2.0
   private cooldownHintTimer: number = 0
   private animationGroups: AnimationGroup[] = []
+  private currentAnimName: string = ''
 
   constructor(
     scene: Scene,
@@ -57,17 +61,30 @@ export class Player {
   private async loadModel(assetManager: AssetManager): Promise<void> {
     const result = await assetManager.loadCharacter(
       'player',
-      '/src/assets/kenney_mini-characters/Models/GLB format/character-male-a.glb'
+      characterModelUrl
     )
 
     const root = result.root
     root.parent = this.mesh
+    this.modelRoot = root
     this.animationGroups = result.animationGroups
 
-    const boundingInfo = root.getBoundingInfo()
-    const height = boundingInfo.boundingBox.extendSizeWorld.y * 2
-    const scale = 1.8 / height
-    root.scaling = new Vector3(scale, scale, scale)
+    root.rotation.x = -Math.PI / 2
+
+    const childMeshes = root.getChildMeshes()
+    if (childMeshes.length > 0) {
+      let minY = Infinity
+      let maxY = -Infinity
+      childMeshes.forEach(m => {
+        m.computeWorldMatrix(true)
+        const bi = m.getBoundingInfo()
+        minY = Math.min(minY, bi.boundingBox.minimumWorld.y)
+        maxY = Math.max(maxY, bi.boundingBox.maximumWorld.y)
+      })
+      const height = Math.max(0.001, maxY - minY)
+      const scale = 1.8 / height
+      root.scaling = new Vector3(scale, scale, scale)
+    }
 
     this.mesh.position = this.position.clone()
   }
@@ -85,7 +102,7 @@ export class Player {
     this.isKicking = true
     this.kickAnimationTime = 0.3
     this.kickCooldown = 5.0
-    this.playAnimation('kick', false)
+    this.playAnimation('Sprint', false)
   }
 
   equipWeapon(weapon: WeaponConfig): void {
@@ -199,6 +216,8 @@ export class Player {
   }
 
   private playAnimation(name: string, loop: boolean = true): void {
+    if (this.currentAnimName === name) return
+    this.currentAnimName = name
     this.animationGroups.forEach(ag => ag.stop())
     const anim = this.animationGroups.find(ag =>
       ag.name.toLowerCase().includes(name.toLowerCase())
@@ -214,8 +233,8 @@ export class Player {
 
     if (this.input.isActionActive('moveForward')) direction.z -= 1
     if (this.input.isActionActive('moveBackward')) direction.z += 1
-    if (this.input.isActionActive('moveLeft')) direction.x -= 1
-    if (this.input.isActionActive('moveRight')) direction.x += 1
+    if (this.input.isActionActive('moveLeft')) direction.x += 1
+    if (this.input.isActionActive('moveRight')) direction.x -= 1
 
     this.isMoving = direction.length() > 0
 
@@ -274,10 +293,12 @@ export class Player {
   }
 
   private updateWalkAnimation(_delta: number): void {
+    if (!this.modelRoot) return
+
     if (this.isMoving && !this.isKicking) {
-      this.playAnimation('walk')
+      this.playAnimation('Walk')
     } else if (!this.isKicking && !this.isSwingingWeapon) {
-      this.playAnimation('idle')
+      this.playAnimation('Idle')
     }
   }
 

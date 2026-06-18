@@ -35,14 +35,16 @@
   <!-- 过关屏：明亮气泡风格 -->
   <Transition name="overlay">
     <div v-if="screen === 'transition'" class="screen screen--transition">
-      <div class="pass-badge">
-        <div class="pass-badge__inner">
-          <span class="pass-badge__emoji">🎉</span>
-          <span class="pass-badge__label">过关！</span>
-          <span class="pass-badge__level">第 {{ transitionLevel }} 关 完成</span>
+      <article class="card">
+        <span class="end-emoji">🎉</span>
+        <h2 class="end-title">过关！</h2>
+        <p class="end-desc">第 {{ transitionLevel }} 关完成</p>
+        <div class="score-block">
+          <span class="score-block__label">踹击数</span>
+          <span class="score-block__value">{{ kickCount }}</span>
         </div>
-      </div>
-      <p class="pass-next">准备进入第 {{ transitionLevel + 1 }} 关 …</p>
+        <button class="btn" @click="$emit('nextLevel')">进入第 {{ transitionLevel + 1 }} 关 🚀</button>
+      </article>
     </div>
   </Transition>
 
@@ -80,6 +82,7 @@ defineProps<{
 defineEmits<{
   start: []
   restart: []
+  nextLevel: []
 }>()
 </script>
 

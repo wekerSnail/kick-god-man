@@ -2,7 +2,6 @@ import {
   Scene,
   SceneLoader,
   TransformNode,
-  Mesh,
   Skeleton,
   AnimationGroup,
   ShadowGenerator
@@ -10,7 +9,7 @@ import {
 import '@babylonjs/loaders/glTF'
 
 export interface CharacterLoadResult {
-  root: Mesh
+  root: TransformNode
   skeleton: Skeleton | null
   animationGroups: AnimationGroup[]
 }
@@ -45,7 +44,7 @@ export class AssetManager {
       if (t !== root) t.parent = root
     })
 
-    this.cache.set(key, root as unknown as Mesh)
+    this.cache.set(key, root)
     if (result.skeletons.length > 0) {
       this.skeletons.set(key, result.skeletons[0])
     }
@@ -54,7 +53,7 @@ export class AssetManager {
     }
 
     return {
-      root: root as unknown as Mesh,
+      root,
       skeleton: result.skeletons[0] ?? null,
       animationGroups: result.animationGroups
     }
@@ -71,13 +70,13 @@ export class AssetManager {
     })
 
     return {
-      root: clone as unknown as Mesh,
+      root: clone,
       skeleton: this.skeletons.get(key) ?? null,
       animationGroups: this.animationGroups.get(key) ?? []
     }
   }
 
-  async loadProp(key: string, glbPath: string): Promise<Mesh> {
+  async loadProp(key: string, glbPath: string): Promise<TransformNode> {
     if (this.cache.has(key)) {
       return this.cloneProp(key)
     }
@@ -92,18 +91,17 @@ export class AssetManager {
         this.shadowGen.addShadowCaster(m)
       })
 
-      this.cache.set(key, root as unknown as Mesh)
-      return root as unknown as Mesh
+      this.cache.set(key, root)
+      return root
     } catch (err) {
       console.warn(`[AssetManager] Failed to load prop ${key} from ${glbPath}:`, err)
-      // 返回一个空 TransformNode 占位，避免上层 await 时崩溃
-      const fallback = new TransformNode(`${key}_fallback`, this.scene) as unknown as Mesh
-      this.cache.set(key, fallback as unknown as TransformNode)
+      const fallback = new TransformNode(`${key}_fallback`, this.scene)
+      this.cache.set(key, fallback)
       return fallback
     }
   }
 
-  private cloneProp(key: string): Mesh {
+  private cloneProp(key: string): TransformNode {
     const src = this.cache.get(key)
     if (!src) throw new Error(`Asset not loaded: ${key}`)
 
@@ -112,13 +110,9 @@ export class AssetManager {
       m.receiveShadows = true
       this.shadowGen.addShadowCaster(m)
     })
-    return clone as unknown as Mesh
+    return clone
   }
 
-  /**
-   * 检查某个 key 是否已成功加载到缓存（加载失败时返回 false）。
-   * 用于上层决定是否回退到程序化几何体。
-   */
   hasProp(key: string): boolean {
     return this.cache.has(key) && !this.cache.get(key)!.name.endsWith('_fallback')
   }
