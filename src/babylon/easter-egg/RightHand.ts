@@ -89,15 +89,20 @@ export class RightHand {
     // 加载武器 GLB 模型
     try {
       const glbPath = `${import.meta.env.BASE_URL}models/${WEAPON_GLB_PATHS[weaponType]}`
-      const result = await this._assetManager.loadCharacter(`weapon_${weaponType}`, glbPath)
-      this._weaponModel = result.root
+      console.log(`[RightHand] Loading weapon from: ${glbPath}`)
+
+      // 使用 loadProp 加载简单模型（不需要骨骼动画）
+      const weaponRoot = await this._assetManager.loadProp(`weapon_${weaponType}`, glbPath)
+      this._weaponModel = weaponRoot
       this._weaponModel.parent = this._weaponNode
 
       // 调整武器大小和方向
       this._weaponModel.scaling = new Vector3(0.5, 0.5, 0.5)
       this._weaponModel.rotation = new Vector3(0, Math.PI, 0)
+
+      console.log(`[RightHand] Successfully loaded weapon: ${weaponType}`)
     } catch (e) {
-      console.warn(`[RightHand] Failed to load weapon GLB for ${weaponType}, using placeholder`)
+      console.warn(`[RightHand] Failed to load weapon GLB for ${weaponType}, using placeholder`, e)
       // 如果加载失败，创建占位几何体
       this._createWeaponPlaceholder(weaponType)
     }

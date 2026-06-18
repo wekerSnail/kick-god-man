@@ -57,9 +57,16 @@ export class FirstPersonCamera {
     // 调整 FOV 为 FPS 标准
     this._camera.fov = 70 * (Math.PI / 180)
 
-    // 锁定鼠标指针
+    // 锁定鼠标指针（如果支持）
     if (this._canvas) {
-      this._canvas.requestPointerLock()
+      try {
+        // 检查canvas是否在主document中
+        if (this._canvas.ownerDocument === document) {
+          this._canvas.requestPointerLock()
+        }
+      } catch (e) {
+        console.warn('[FirstPersonCamera] Pointer lock not available:', e)
+      }
       this._mouseMoveHandler = (e: MouseEvent) => this._onMouseMove(e)
       document.addEventListener('mousemove', this._mouseMoveHandler)
     }
@@ -123,9 +130,13 @@ export class FirstPersonCamera {
   exit(): void {
     if (!this._isActive) return
 
-    // 退出鼠标锁定
-    if (document.pointerLockElement) {
-      document.exitPointerLock()
+    // 退出鼠标锁定（如果支持）
+    try {
+      if (document.pointerLockElement) {
+        document.exitPointerLock()
+      }
+    } catch (e) {
+      console.warn('[FirstPersonCamera] Error exiting pointer lock:', e)
     }
 
     // 移除鼠标事件
