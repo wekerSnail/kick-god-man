@@ -248,11 +248,11 @@ export class RightHand {
       ? this._rightHandBone.getAbsolutePosition()
       : new Vector3(0.5, 1, 0)
 
-    // 只显示右手附近的 mesh（距离 < 0.5 单位）
+    // 只显示右手附近的 mesh（距离 < 1.0 单位，稍微放宽范围）
     for (const mesh of allMeshes) {
       const meshPos = mesh.getAbsolutePosition()
       const dist = Vector3.Distance(meshPos, rightHandPos)
-      if (dist < 0.5) {
+      if (dist < 1.0) {
         mesh.isVisible = true
       }
     }
