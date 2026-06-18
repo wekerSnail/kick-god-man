@@ -18,9 +18,14 @@ const SMOKE_PARTICLE_COUNT = 30
  */
 export class EasterEggExplosion {
   private _scene: Scene
+  private _onShake: (() => void) | null = null
 
   constructor(scene: Scene) {
     this._scene = scene
+  }
+
+  setShakeCallback(callback: () => void): void {
+    this._onShake = callback
   }
 
   /**
@@ -31,6 +36,7 @@ export class EasterEggExplosion {
     this._createFireParticles(position)
     this._createSmokeParticles(position)
     this._createShockwave(position)
+    this._onShake?.()
   }
 
   /**
@@ -101,8 +107,8 @@ export class EasterEggExplosion {
     sphere.position = position.clone()
 
     const mat = new StandardMaterial('shockwaveMat', this._scene)
-    mat.emissiveColor = new Color3(1, 0.5, 0)
-    mat.alpha = 0.6
+    mat.emissiveColor = new Color3(0.1, 0.1, 0.1)
+    mat.alpha = 0.5
     mat.disableLighting = true
     sphere.material = mat
 
@@ -128,7 +134,7 @@ export class EasterEggExplosion {
       Animation.ANIMATIONLOOPMODE_CONSTANT
     )
     alphaAnim.setKeys([
-      { frame: 0, value: 0.6 },
+      { frame: 0, value: 0.5 },
       { frame: 15, value: 0 }
     ])
 

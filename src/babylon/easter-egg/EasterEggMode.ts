@@ -16,10 +16,9 @@ import { EasterEggHUD } from './EasterEggHUD'
 export class EasterEggMode {
   private _isActive = false
   private _timeRemaining = 30
-  private _weaponSwitchTimer = 0
-  private _weaponSwitchInterval = 6
   private _currentWeaponType: EasterEggWeaponType = 'gun'
   private _onComplete: (() => void) | null = null
+  private _onShake: (() => void) | null = null
 
   // 子系统
   private _camera!: FirstPersonCamera
@@ -65,8 +64,6 @@ export class EasterEggMode {
 
     this._isActive = true
     this._timeRemaining = 30
-    this._weaponSwitchTimer = 0
-    this._weaponSwitchInterval = 5 + Math.random() * 3
     this._currentWeaponType = this._pickRandomWeapon()
     this._onComplete = onComplete ?? null
 
@@ -75,6 +72,7 @@ export class EasterEggMode {
 
     // 初始化子系统
     this._explosion = new EasterEggExplosion(this._scene)
+    this._explosion.setShakeCallback(() => this._onShake?.())
     this._boss = new EasterEggBoss(this._enemy)
     this._weapons = new EasterEggWeapons(this._scene, this._boss)
     this._weapons.setExplosion(this._explosion)
@@ -139,16 +137,6 @@ export class EasterEggMode {
       return
     }
 
-    // 定时切换武器
-    this._weaponSwitchTimer += delta
-    if (this._weaponSwitchTimer >= this._weaponSwitchInterval) {
-      this._weaponSwitchTimer = 0
-      this._weaponSwitchInterval = 5 + Math.random() * 3
-      this._currentWeaponType = this._pickRandomWeapon()
-      this._weapons.switchWeapon(this._currentWeaponType)
-      this._rightHand.switchWeapon(this._currentWeaponType)
-    }
-
     // 更新子系统
     this._boss.update(delta)
     this._rightHand.update(delta)
@@ -156,9 +144,8 @@ export class EasterEggMode {
     this._hud.update(this._timeRemaining)
 
     // 更新武器系统（射击逻辑）
-    // 使用武器位置作为射击起点（相机位置 + 武器偏移）
-    const weaponOffset = new Vector3(0.3, -0.25, 0.5)
-    const fireOrigin = this._mainCamera!.position.add(weaponOffset)
+    // 使用右手武器实际世界位置作为射击起点
+    const fireOrigin = this._rightHand.getWeaponWorldPosition()
     const fireDirection = this._camera.getForwardDirection()
     this._weapons.update(delta, fireOrigin, fireDirection)
   }
@@ -174,6 +161,16 @@ export class EasterEggMode {
     this._weapons?.stopFiring()
   }
 
+  setShakeCallback(callback: () => void): void {
+    this._onShake = callback
+  }
+
+  switchWeapon(type: EasterEggWeaponType): void {
+    this._currentWeaponType = type
+    this._weapons.switchWeapon(type)
+    this._rightHand.switchWeapon(type)
+  }
+
   private _pickRandomWeapon(): EasterEggWeaponType {
     const types: EasterEggWeaponType[] = EASTER_EGG_WEAPONS.map(w => w.type)
     const current = this._currentWeaponType
@@ -183,8 +180,9 @@ export class EasterEggMode {
 
   private _handleComplete(): void {
     this._isActive = false
+    const cb = this._onComplete
     this.stop()
-    this._onComplete?.()
+    cb?.()
   }
 
   dispose(): void {

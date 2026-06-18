@@ -6,7 +6,8 @@ import {
   MeshBuilder,
   TransformNode,
   StandardMaterial,
-  Color3
+  Color3,
+  Mesh
 } from '@babylonjs/core'
 import type { EasterEggWeaponType } from '../../types/game'
 import { EASTER_EGG_WEAPONS } from '../../types/game'
@@ -57,8 +58,12 @@ export class EasterEggWeapons {
   private _fireCooldown = 0
   private _isFiring = false
   private _currentWeaponType: EasterEggWeaponType = 'gun'
-  private _aimLineNodes: TransformNode[] = [] // 手榴弹瞄准辅助线
+  private _aimLinePool: Mesh[] = [] // 预分配的瞄准点对象池
   private _recoilCallback: RecoilCallback | null = null
+  private _aimDotMat: StandardMaterial | null = null
+  private _landingIndicator: Mesh | null = null
+  private _landingIndicatorMat: StandardMaterial | null = null
+  private _grenadeInFlight = false
 
   constructor(scene: Scene, boss: EasterEggBoss) {
     this._scene = scene
@@ -120,8 +125,10 @@ export class EasterEggWeapons {
     this._updateProjectiles(delta)
 
     // 更新手榴弹瞄准线
-    if (this._currentWeaponType === 'grenade') {
+    if (this._currentWeaponType === 'grenade' && !this._grenadeInFlight) {
       this._updateAimLine(fireOrigin, fireDirection)
+    } else {
+      this._clearAimLine()
     }
   }
 
@@ -224,7 +231,7 @@ export class EasterEggWeapons {
     grenade.position = origin.clone()
 
     const mat = new StandardMaterial('grenadeMat', this._scene)
-    mat.emissiveColor = Color3.Green()
+    mat.emissiveColor = new Color3(0.15, 0.15, 0.15)
     grenade.material = mat
 
     // 初始速度：向前 + 向上抛物线（较小弧度）
@@ -234,6 +241,9 @@ export class EasterEggWeapons {
       GRENADE_SPEED * 0.5, // 向上分量（减小弧度）
       dir.z * GRENADE_SPEED
     )
+
+    this._createGrenadeTrail(grenade)
+    this._grenadeInFlight = true
 
     this._projectiles.push({
       node: grenade,
@@ -400,6 +410,33 @@ export class EasterEggWeapons {
   }
 
   /**
+   * 创建手榴弹黑色粒子尾迹
+   */
+  private _createGrenadeTrail(grenade: TransformNode): void {
+    const ps = new ParticleSystem('grenadeTrail', 40, this._scene)
+    ps.emitter = grenade.position
+    ps.createSphereEmitter(0.06)
+
+    ps.color1 = new Color4(0.15, 0.15, 0.15, 0.8)
+    ps.color2 = new Color4(0.1, 0.1, 0.1, 0.5)
+    ps.colorDead = new Color4(0, 0, 0, 0)
+
+    ps.minSize = 0.05
+    ps.maxSize = 0.15
+    ps.minLifeTime = 0.15
+    ps.maxLifeTime = 0.4
+
+    ps.emitRate = 80
+    ps.gravity = new Vector3(0, -0.3, 0)
+    ps.direction1 = new Vector3(-0.05, -0.05, -0.05)
+    ps.direction2 = new Vector3(0.05, 0.05, 0.05)
+
+    ps.targetStopDuration = GRENADE_LIFETIME
+    ps.disposeOnStop = true
+    ps.start()
+  }
+
+  /**
    * 创建枪口/发射闪光
    */
   private _createMuzzleFlash(position: Vector3, color?: Color3): void {
@@ -440,49 +477,116 @@ export class EasterEggWeapons {
   }
 
   /**
-   * 更新手榴弹瞄准辅助线
+   * 更新手榴弹瞄准辅助线（复用对象池，不闪烁）
    */
   private _updateAimLine(origin: Vector3, direction: Vector3): void {
-    this._clearAimLine()
-
     const dir = direction.normalize()
-    const velocity = new Vector3(
-      dir.x * GRENADE_SPEED,
-      GRENADE_SPEED * 0.5, // 与实际投掷速度匹配
-      dir.z * GRENADE_SPEED
-    )
+    const vx = dir.x * GRENADE_SPEED
+    const vy = GRENADE_SPEED * 0.5
+    const vz = dir.z * GRENADE_SPEED
 
-    // 模拟抛物线轨迹，每隔 0.05s 一个点（更密集）
-    const gravity = new Vector3(0, GRENADE_GRAVITY, 0)
-    let pos = origin.clone()
-    let vel = velocity.clone()
+    const gravity = GRENADE_GRAVITY
+    let px = origin.x
+    let py = origin.y
+    let pz = origin.z
+    let velY = vy
+
+    let lastPos = new Vector3(px, py, pz)
+    let landedPos: Vector3 | null = null
+    let idx = 0
 
     for (let t = 0; t < 2.0; t += 0.05) {
-      pos = pos.add(vel.scale(0.05))
-      vel = vel.add(gravity.scale(0.05))
+      px += vx * 0.05
+      velY += gravity * 0.05
+      py += velY * 0.05
+      pz += vz * 0.05
 
-      if (pos.y < 0) break
+      if (py < 0) {
+        const prevY = lastPos.y
+        const frac = prevY / (prevY - py)
+        landedPos = new Vector3(
+          lastPos.x + (px - lastPos.x) * frac,
+          0.01,
+          lastPos.z + (pz - lastPos.z) * frac
+        )
+        break
+      }
 
-      const dot = MeshBuilder.CreateSphere(`aimDot_${t}`, { diameter: 0.12 }, this._scene)
-      dot.position = pos.clone()
+      lastPos = new Vector3(px, py, pz)
 
-      const mat = new StandardMaterial(`aimDotMat_${t}`, this._scene)
-      mat.emissiveColor = Color3.Yellow()
-      mat.disableLighting = true
-      dot.material = mat
+      // 复用或创建点
+      let dot: Mesh
+      if (idx < this._aimLinePool.length) {
+        dot = this._aimLinePool[idx] as Mesh
+        dot.setEnabled(true)
+      } else {
+        dot = MeshBuilder.CreateSphere(`aimDot_${idx}`, { diameter: 0.06 }, this._scene)
+        dot.material = this._getAimDotMat()
+        this._aimLinePool.push(dot)
+      }
+      dot.position.copyFrom(lastPos)
+      idx++
+    }
 
-      this._aimLineNodes.push(dot)
+    // 隐藏多余的点
+    for (let i = idx; i < this._aimLinePool.length; i++) {
+      this._aimLinePool[i].setEnabled(false)
+    }
+
+    // 落点指示圈
+    if (landedPos) {
+      this._updateLandingIndicator(landedPos)
+    } else {
+      this._removeLandingIndicator()
     }
   }
 
+  private _getAimDotMat(): StandardMaterial {
+    if (!this._aimDotMat) {
+      this._aimDotMat = new StandardMaterial('aimDotMat', this._scene)
+      this._aimDotMat.emissiveColor = new Color3(0.3, 0.3, 0.3)
+      this._aimDotMat.disableLighting = true
+      this._aimDotMat.alpha = 0.8
+    }
+    return this._aimDotMat
+  }
+
+  private _updateLandingIndicator(pos: Vector3): void {
+    if (!this._landingIndicator) {
+      this._landingIndicator = MeshBuilder.CreateDisc('landingCircle',
+        { radius: 2.0, tessellation: 32 }, this._scene)
+      this._landingIndicator.rotation.x = Math.PI / 2
+
+      this._landingIndicatorMat = new StandardMaterial('landingMat', this._scene)
+      this._landingIndicatorMat.emissiveColor = new Color3(1, 0, 0)
+      this._landingIndicatorMat.alpha = 0.4
+      this._landingIndicatorMat.disableLighting = true
+      this._landingIndicatorMat.backFaceCulling = false
+      this._landingIndicator.material = this._landingIndicatorMat
+    }
+
+    this._landingIndicator.position = pos
+    if (this._landingIndicatorMat) {
+      const pulse = Math.sin(Date.now() * 0.004) * 0.15
+      this._landingIndicatorMat.alpha = 0.35 + pulse
+    }
+  }
+
+  private _removeLandingIndicator(): void {
+    this._landingIndicator?.dispose()
+    this._landingIndicator = null
+    this._landingIndicatorMat?.dispose()
+    this._landingIndicatorMat = null
+  }
+
   /**
-   * 清除瞄准辅助线
+   * 隐藏瞄准辅助线（不销毁对象池）
    */
   private _clearAimLine(): void {
-    for (const node of this._aimLineNodes) {
-      node.dispose()
+    for (const node of this._aimLinePool) {
+      node.setEnabled(false)
     }
-    this._aimLineNodes = []
+    this._removeLandingIndicator()
   }
 
   /**
@@ -490,6 +594,9 @@ export class EasterEggWeapons {
    */
   private _removeProjectile(index: number): void {
     const proj = this._projectiles[index]
+    if (proj.type === 'grenade') {
+      this._grenadeInFlight = false
+    }
     proj.node.dispose()
     this._projectiles.splice(index, 1)
   }
@@ -506,6 +613,12 @@ export class EasterEggWeapons {
       proj.node.dispose()
     }
     this._projectiles = []
-    this._clearAimLine()
+    for (const node of this._aimLinePool) {
+      node.dispose()
+    }
+    this._aimLinePool = []
+    this._removeLandingIndicator()
+    this._aimDotMat?.dispose()
+    this._aimDotMat = null
   }
 }

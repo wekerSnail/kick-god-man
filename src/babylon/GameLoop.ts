@@ -19,7 +19,8 @@ import { LevelManager } from './systems/LevelManager'
 import { AudioManager } from './systems/AudioManager'
 import { ProjectileSystem } from './systems/ProjectileSystem'
 import { Props } from './Props'
-import { WEAPON_CONFIGS } from '../types/game'
+import { WEAPON_CONFIGS, EASTER_EGG_WEAPONS } from '../types/game'
+import type { EasterEggWeaponType } from '../types/game'
 import { EasterEggMode } from './easter-egg/EasterEggMode'
 
 export class GameLoop {
@@ -66,6 +67,7 @@ export class GameLoop {
   private isEasterEgg = false
   private _easterFireStart: (() => void) | null = null
   private _easterFireStop: (() => void) | null = null
+  private _pendingShake = false
 
   constructor(container: HTMLElement, onStateChange: (state: any) => void) {
     this.onStateChange = onStateChange
@@ -169,8 +171,11 @@ export class GameLoop {
         isPatrolWarning: false,
         isEasterEgg: true,
         easterEggTimeRemaining: this.easterEggMode.timeRemaining,
-        easterEggWeaponType: this.easterEggMode.currentWeaponType
+        easterEggWeaponType: this.easterEggMode.currentWeaponType,
+        easterEggWeapons: EASTER_EGG_WEAPONS.map(w => ({ type: w.type, name: w.name })),
+        grenadeShake: this._pendingShake
       })
+      this._pendingShake = false
       return
     }
 
@@ -538,12 +543,16 @@ export class GameLoop {
 
   async startEasterEgg(onComplete?: () => void): Promise<void> {
     this.isEasterEgg = true
+    this.isGameOver = false
+    this.isWin = false
+    this.health = this.maxHealth
     this.easterEggMode = new EasterEggMode()
     this.easterEggMode.init(this.scene, this.assetManager, this.enemy, this.player, this.camera, this.canvas!)
     await this.easterEggMode.start(() => {
       this.stopEasterEgg()
       onComplete?.()
     })
+    this.easterEggMode.setShakeCallback(() => { this._pendingShake = true })
 
     // 注册射击输入
     this._easterFireStart = () => this.easterEggMode?.onFireStart()
@@ -568,10 +577,24 @@ export class GameLoop {
 
     // 重置敌人检测状态，避免彩蛋模式结束后立即触发游戏结束
     this.enemy.setLookBackDetected(false)
+    this.enemy.consumeLookBackGameOver()
 
     // 恢复敌人到正常状态（传送回原位）
     this.enemy.position = new Vector3(0, 0, 0)
     this.enemy.syncPosition()
+
+    // 重置生命值，避免残留低血量
+    this.health = this.maxHealth
+  }
+
+  switchEasterEggWeapon(type: EasterEggWeaponType): void {
+    this.easterEggMode?.switchWeapon(type)
+  }
+
+  advanceLevelAfterEasterEgg(): void {
+    this.levelManager.advanceLevel()
+    this.kickCount = 0
+    this.kickCounted = false
   }
 
   private createVictoryParticles(): void {

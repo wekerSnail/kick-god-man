@@ -57,4 +57,9 @@ export class LevelManager {
     this.isTransitioning = false
     this.events.emit('level:complete', { level: this.level })
   }
+
+  advanceLevel(): void {
+    this.level++
+    this.kickTarget = this.kickTargets[this.level - 1] ?? this.kickTargets[this.kickTargets.length - 1]
+  }
 }

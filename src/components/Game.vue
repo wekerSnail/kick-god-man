@@ -43,6 +43,20 @@
       :invisible-active="gameState.invisibleActive"
     />
 
+    <!-- 彩蛋模式武器栏 -->
+    <div v-if="gameState.isEasterEgg" class="easter-weapons">
+      <button
+        v-for="(w, idx) in gameState.easterEggWeapons"
+        :key="w.type"
+        class="easter-weapon"
+        :class="{ 'easter-weapon--active': w.type === gameState.easterEggWeaponType }"
+        @click="switchEasterEggWeapon(w.type)"
+      >
+        <span class="easter-weapon__key">{{ idx + 1 }}</span>
+        <span class="easter-weapon__name">{{ w.name }}</span>
+      </button>
+    </div>
+
     <OverlayScreens
       :screen="overlayScreen"
       :is-win="gameState.isWin"
@@ -99,6 +113,7 @@ const DEFAULT_STATE = () => ({
   isEasterEgg: false,
   easterEggTimeRemaining: 0,
   easterEggWeaponType: null as string | null,
+  easterEggWeapons: [] as { type: string; name: string }[],
 })
 
 const gameState = ref(DEFAULT_STATE())
@@ -131,6 +146,12 @@ const attachLoop = () => {
       const delta = state.kickCount - prev.lastKickCount
       triggerShake(delta >= 3 ? 'heavy' : 'light')
     }
+
+    // 手榴弹爆炸震动
+    if (state.grenadeShake) {
+      triggerShake('heavy')
+    }
+
     gameState.value.lastKickCount = state.kickCount
   })
 }
@@ -157,16 +178,29 @@ const restartGame = () => {
   }, 100)
 }
 
+let _fromEasterEgg = false
+
 const nextLevel = () => {
   gameState.value.isLevelTransition = false
-  gameLoop?.completeLevelTransition()
+  if (_fromEasterEgg) {
+    _fromEasterEgg = false
+    gameLoop?.advanceLevelAfterEasterEgg()
+  } else {
+    gameLoop?.completeLevelTransition()
+  }
 }
 
 const useProp = (index: number) => {
   gameLoop?.useProp(index)
 }
 
+const switchEasterEggWeapon = (type: string) => {
+  gameLoop?.switchEasterEggWeapon(type as any)
+}
+
 const startEasterEgg = () => {
+  _fromEasterEgg = true
+  gameState.value.isLevelTransition = false
   gameLoop?.startEasterEgg(() => {
     // 彩蛋模式结束，恢复过渡画面状态
     gameState.value = {
@@ -181,7 +215,15 @@ const startEasterEgg = () => {
 
 const handleKeyDown = (e: KeyboardEvent) => {
   if (e.key === '1' || e.key === '2' || e.key === '3') {
-    useProp(parseInt(e.key) - 1)
+    if (gameState.value.isEasterEgg) {
+      const weapons = gameState.value.easterEggWeapons
+      const idx = parseInt(e.key) - 1
+      if (weapons[idx]) {
+        switchEasterEggWeapon(weapons[idx].type)
+      }
+    } else {
+      useProp(parseInt(e.key) - 1)
+    }
   }
 }
 
@@ -242,5 +284,54 @@ onUnmounted(() => {
   25% { transform: translateX(-4px) translateY(1px); }
   50% { transform: translateX(4px) translateY(-1px); }
   75% { transform: translateX(-2px) translateY(1px); }
+}
+
+/* 彩蛋模式武器栏 */
+.easter-weapons {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 50;
+}
+.easter-weapon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 16px;
+  background: rgba(30, 30, 30, 0.7);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  backdrop-filter: blur(4px);
+}
+.easter-weapon:hover {
+  background: rgba(50, 50, 50, 0.8);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.easter-weapon--active {
+  background: rgba(84, 160, 255, 0.3);
+  border-color: rgba(84, 160, 255, 0.8);
+  color: #fff;
+  box-shadow: 0 0 12px rgba(84, 160, 255, 0.4);
+}
+.easter-weapon__key {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.6;
+}
+.easter-weapon--active .easter-weapon__key {
+  opacity: 1;
+}
+.easter-weapon__name {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
 }
 </style>

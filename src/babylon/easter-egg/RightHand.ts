@@ -33,6 +33,7 @@ export class RightHand {
   private _weaponModel: TransformNode | null = null
   private _isActive = false
   private _idleTime = 0
+  private _switchGeneration = 0
 
   // CS:GO 风格武器跟随
   private _targetOffsetX = 0
@@ -84,12 +85,21 @@ export class RightHand {
 
     if (!this._weaponNode) return
 
+    const gen = ++this._switchGeneration
+
     // 加载武器 GLB 模型
     try {
       const glbPath = WEAPON_URLS[weaponType]
       console.log(`[RightHand] Loading weapon from: ${glbPath}`)
 
       const weaponRoot = await this._assetManager.loadProp(`weapon_${weaponType}`, glbPath)
+
+      // 如果期间又切换了武器，丢弃这次加载结果
+      if (gen !== this._switchGeneration) {
+        weaponRoot.dispose()
+        return
+      }
+
       this._weaponModel = weaponRoot
       this._weaponModel.parent = this._weaponNode
 
@@ -104,6 +114,7 @@ export class RightHand {
 
       console.log(`[RightHand] Successfully loaded weapon: ${weaponType}`)
     } catch (e) {
+      if (gen !== this._switchGeneration) return
       console.warn(`[RightHand] Failed to load weapon GLB for ${weaponType}, using placeholder`, e)
       this._createWeaponPlaceholder(weaponType)
     }
@@ -220,6 +231,13 @@ export class RightHand {
 
   get weaponNode(): TransformNode | null {
     return this._weaponNode
+  }
+
+  getWeaponWorldPosition(): Vector3 {
+    if (this._weaponNode) {
+      return this._weaponNode.getAbsolutePosition()
+    }
+    return Vector3.Zero()
   }
 
   dispose(): void {
