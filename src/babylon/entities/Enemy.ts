@@ -119,8 +119,8 @@ export class Enemy {
       new Vector3(-3, 0, -8),   // 下方偏左
     ]
 
-    // 随机选择3-5个路径点
-    const numPoints = 3 + Math.floor(Math.random() * 3)
+    // 随机选择10-12个路径点
+    const numPoints = 10 + Math.floor(Math.random() * 3)
     const shuffled = [...possibleWaypoints].sort(() => Math.random() - 0.5)
     this.patrolWaypoints = shuffled.slice(0, numPoints)
 
