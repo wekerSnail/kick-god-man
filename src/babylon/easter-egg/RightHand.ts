@@ -42,6 +42,10 @@ export class RightHand {
   private _swaySpeed = 8 // 跟随速度
   private _swayAmount = 0.15 // 跟随幅度
 
+  // 后坐力效果
+  private _recoilOffset = 0
+  private _recoilRecovery = 8 // 后坐力恢复速度
+
   // 武器基础位置（屏幕右下角）
   private _basePosition = new Vector3(0.3, -0.25, 0.5)
 
@@ -136,7 +140,7 @@ export class RightHand {
   }
 
   /**
-   * 更新武器 - CS:GO 风格跟随 + 呼吸晃动
+   * 更新武器 - CS:GO 风格跟随 + 后坐力 + 呼吸晃动
    */
   update(delta: number): void {
     if (!this._isActive || !this._weaponNode) return
@@ -147,13 +151,16 @@ export class RightHand {
     this._currentOffsetX += (this._targetOffsetX - this._currentOffsetX) * this._swaySpeed * delta
     this._currentOffsetY += (this._targetOffsetY - this._currentOffsetY) * this._swaySpeed * delta
 
-    // 应用偏移到武器位置
+    // 后坐力恢复
+    this._recoilOffset *= (1 - this._recoilRecovery * delta)
+
+    // 应用偏移到武器位置（包括后坐力）
     this._weaponNode.position.x = this._basePosition.x + this._currentOffsetX
-    this._weaponNode.position.y = this._basePosition.y + this._currentOffsetY
+    this._weaponNode.position.y = this._basePosition.y + this._currentOffsetY + this._recoilOffset
 
     // 轻微倾斜效果（跟随偏移方向）
     this._weaponNode.rotation.z = -this._currentOffsetX * 1.5
-    this._weaponNode.rotation.x = this._currentOffsetY * 1.5
+    this._weaponNode.rotation.x = this._currentOffsetY * 1.5 - this._recoilOffset * 5
 
     // 轻微呼吸晃动
     const breathX = Math.sin(this._idleTime * 1.5) * 0.003
@@ -181,6 +188,13 @@ export class RightHand {
   resetSway(): void {
     this._targetOffsetX = 0
     this._targetOffsetY = 0
+  }
+
+  /**
+   * 触发后坐力效果
+   */
+  applyRecoil(intensity: number = 0.05): void {
+    this._recoilOffset = intensity
   }
 
   /**

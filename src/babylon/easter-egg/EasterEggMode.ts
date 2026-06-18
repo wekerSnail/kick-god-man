@@ -88,6 +88,9 @@ export class EasterEggMode {
       () => this._rightHand.resetSway()
     )
 
+    // 连接武器后坐力
+    this._weapons.setRecoilCallback((intensity) => this._rightHand.applyRecoil(intensity))
+
     // 加载武器系统
     await this._rightHand.load()
 
@@ -104,8 +107,8 @@ export class EasterEggMode {
     const playerPos = new Vector3(0, 0, 3) // 房间中心靠后
     this._camera.enter(playerPos, this._enemy.position)
 
-    // 倒计时 HUD + 十字准星
-    this._hud.create(new Vector3(0, 4, -5), this._mainCamera!)
+    // 倒计时 HUD + 十字准星（更高位置）
+    this._hud.create(new Vector3(0, 6, -5), this._mainCamera!)
   }
 
   stop(): void {

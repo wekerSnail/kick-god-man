@@ -99,6 +99,8 @@ export class EasterEggHUD {
     this._crosshairMaterial.disableLighting = true
     this._crosshairMaterial.backFaceCulling = false
     this._crosshairMaterial.useAlphaFromDiffuseTexture = true
+    this._crosshairMaterial.diffuseTexture.hasAlpha = true
+    this._crosshairMaterial.alpha = 1
     this._crosshair.material = this._crosshairMaterial
   }
 

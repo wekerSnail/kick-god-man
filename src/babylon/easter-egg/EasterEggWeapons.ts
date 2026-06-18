@@ -42,6 +42,9 @@ interface Projectile {
   detonateTimer: number
 }
 
+// 后坐力回调类型
+type RecoilCallback = (intensity: number) => void
+
 /**
  * 彩蛋模式武器系统
  * 管理三种武器的射击逻辑、弹道粒子、命中检测
@@ -55,6 +58,7 @@ export class EasterEggWeapons {
   private _isFiring = false
   private _currentWeaponType: EasterEggWeaponType = 'gun'
   private _aimLineNodes: TransformNode[] = [] // 手榴弹瞄准辅助线
+  private _recoilCallback: RecoilCallback | null = null
 
   constructor(scene: Scene, boss: EasterEggBoss) {
     this._scene = scene
@@ -63,6 +67,13 @@ export class EasterEggWeapons {
 
   setExplosion(explosion: EasterEggExplosion): void {
     this._explosion = explosion
+  }
+
+  /**
+   * 设置后坐力回调
+   */
+  setRecoilCallback(callback: RecoilCallback): void {
+    this._recoilCallback = callback
   }
 
   /**
@@ -121,12 +132,15 @@ export class EasterEggWeapons {
     switch (this._currentWeaponType) {
       case 'gun':
         this._fireGun(origin, direction)
+        this._recoilCallback?.(0.03) // 手枪后坐力
         break
       case 'rocket':
         this._fireRocket(origin, direction)
+        this._recoilCallback?.(0.08) // 火箭炮后坐力更大
         break
       case 'grenade':
         this._fireGrenade(origin, direction)
+        this._recoilCallback?.(0.05) // 手榴弹后坐力
         break
     }
   }
@@ -320,12 +334,12 @@ export class EasterEggWeapons {
     ps.color2 = new Color4(1, 0.8, 0, 0.6)
     ps.colorDead = new Color4(1, 0.5, 0, 0)
 
-    ps.minSize = 0.02
-    ps.maxSize = 0.06
-    ps.minLifeTime = 0.03
-    ps.maxLifeTime = 0.15
+    ps.minSize = 0.03
+    ps.maxSize = 0.08
+    ps.minLifeTime = 0.05
+    ps.maxLifeTime = 0.2
 
-    ps.emitRate = 200
+    ps.emitRate = 150
     ps.gravity = Vector3.Zero()
 
     ps.targetStopDuration = BULLET_LIFETIME
@@ -417,10 +431,9 @@ export class EasterEggWeapons {
     ps.start()
 
     // 快速消失
-    const disposeFlash = () => {
+    setTimeout(() => {
       flash.dispose()
-    }
-    setTimeout(disposeFlash, 50)
+    }, 50)
   }
 
   /**
