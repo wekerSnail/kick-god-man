@@ -7,6 +7,9 @@ export class NormalState implements IState<Enemy> {
 
   enter(ctx: Enemy): void {
     ctx.scheduleNextLookBack();
+    // 重置巡查和会议计时器，防止状态切换后立即再次触发
+    ctx.nextPatrolTime = 20 + Math.random() * 15;
+    ctx.nextMeetingTime = 12 + Math.random() * 8;
   }
 
   update(ctx: Enemy, dt: number): IState<Enemy> | null {

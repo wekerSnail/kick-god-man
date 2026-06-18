@@ -65,12 +65,14 @@ export class GameLoop {
   constructor(container: HTMLElement, onStateChange: (state: any) => void) {
     this.onStateChange = onStateChange
     this.events = new EventBus()
-    this.input = new InputManager()
 
     this.canvas = document.createElement('canvas')
     this.canvas.style.width = '100%'
     this.canvas.style.height = '100%'
     container.appendChild(this.canvas)
+
+    // 传递 canvas 给 InputManager，以便在 canvas 上添加鼠标事件
+    this.input = new InputManager(this.canvas)
 
     this.engineContext = new EngineContext(this.canvas)
     this.scene = this.engineContext.scene
