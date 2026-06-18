@@ -135,6 +135,22 @@ export class GameLoop {
   private update(delta: number): void {
     if (this.isGameOver) return
 
+    // 先处理投掷输入，让 player.update() 能立即渲染蓄力条
+    if (this.input.isActionJustPressed('throwWeapon')) {
+      if (this.player.canThrow()) {
+        this.player.startThrowCharge()
+      }
+    }
+    if (!this.input.isActionActive('throwWeapon') && this.player.isCharging()) {
+      const power = this.player.releaseThrow()
+      if (power > 0) {
+        const weapon = this.player.getEquippedWeapon()!
+        const dir = this.player.getThrowDirection()
+        this.projectileSystem.spawn(this.player.getPosition(), dir, power, weapon)
+        this.player.unequipWeapon()
+      }
+    }
+
     this.player.update(delta)
 
     const playerPos = this.player.getPosition()
@@ -304,21 +320,6 @@ export class GameLoop {
 
     if (this.enemy.getState() === 'attacked') {
       this.enemy.setPlayerUsingKeyboard(this.player.getPotActive())
-    }
-
-    if (this.input.isActionJustPressed('throwWeapon')) {
-      if (this.player.canThrow()) {
-        this.player.startThrowCharge()
-      }
-    }
-    if (!this.input.isActionActive('throwWeapon') && this.player.isCharging()) {
-      const power = this.player.releaseThrow()
-      if (power > 0) {
-        const weapon = this.player.getEquippedWeapon()!
-        const dir = this.player.getThrowDirection()
-        this.projectileSystem.spawn(this.player.getPosition(), dir, power, weapon)
-        this.player.unequipWeapon()
-      }
     }
 
     this.projectileSystem.update(delta)

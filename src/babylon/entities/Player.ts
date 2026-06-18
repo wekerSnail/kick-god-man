@@ -113,8 +113,8 @@ export class Player {
     fillMat.albedoTexture = this.potCooldownBarFill
     fillMat.emissiveTexture = this.potCooldownBarFill
     fillMat.opacityTexture = this.potCooldownBarFill
-    fillMat.albedoColor = new Color3(0, 0, 0)
-    fillMat.emissiveColor = new Color3(0, 0, 0)
+    fillMat.albedoColor = new Color3(1, 1, 1)
+    fillMat.emissiveColor = new Color3(1, 1, 1)
     fill.material = fillMat
 
     const ctx = this.potCooldownBarFill.getContext()
@@ -150,8 +150,8 @@ export class Player {
     fillMat.albedoTexture = this.cooldownBarFill
     fillMat.emissiveTexture = this.cooldownBarFill
     fillMat.opacityTexture = this.cooldownBarFill
-    fillMat.albedoColor = new Color3(0, 0, 0)
-    fillMat.emissiveColor = new Color3(0, 0, 0)
+    fillMat.albedoColor = new Color3(1, 1, 1)
+    fillMat.emissiveColor = new Color3(1, 1, 1)
     fill.material = fillMat
 
     const ctx = this.cooldownBarFill.getContext()
@@ -229,8 +229,8 @@ export class Player {
     fillMat.albedoTexture = this.throwChargeBarFill
     fillMat.emissiveTexture = this.throwChargeBarFill
     fillMat.opacityTexture = this.throwChargeBarFill
-    fillMat.albedoColor = new Color3(0, 0, 0)
-    fillMat.emissiveColor = new Color3(0, 0, 0)
+    fillMat.albedoColor = new Color3(1, 1, 1)
+    fillMat.emissiveColor = new Color3(1, 1, 1)
     fill.material = fillMat
 
     const ctx = this.throwChargeBarFill.getContext()
