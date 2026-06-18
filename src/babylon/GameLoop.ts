@@ -18,6 +18,7 @@ import { CollisionSystem } from './systems/CollisionSystem'
 import { LevelManager } from './systems/LevelManager'
 import { AudioManager } from './systems/AudioManager'
 import { ProjectileSystem } from './systems/ProjectileSystem'
+import { Props } from './Props'
 import { WEAPON_CONFIGS } from '../types/game'
 
 export class GameLoop {
@@ -33,6 +34,7 @@ export class GameLoop {
   private levelManager: LevelManager
   private audio: AudioManager
   private projectileSystem: ProjectileSystem
+  private props: Props
   private input: InputManager
   private events: EventBus
   private kickCount: number = 0
@@ -78,6 +80,7 @@ export class GameLoop {
     this.levelManager = new LevelManager(this.events)
     this.audio = new AudioManager()
     this.projectileSystem = new ProjectileSystem(this.scene)
+    this.props = new Props(this.scene)
   }
 
   async init(): Promise<void> {
@@ -332,6 +335,23 @@ export class GameLoop {
       }
     }
 
+    const pickedUp = this.props.update(delta, this.player.getPosition())
+    if (pickedUp) {
+      const allConfigs = [...WEAPON_CONFIGS]
+      const config = allConfigs.find(c => c.type === pickedUp.type)
+      this.inventory.push({
+        id: pickedUp.id,
+        type: pickedUp.type,
+        name: config?.name ?? pickedUp.type,
+        icon: config?.icon ?? '?',
+        description: config?.description ?? '',
+        duration: pickedUp.duration,
+        active: false,
+        category: pickedUp.category,
+        count: 1
+      })
+    }
+
     this.updateInventory(delta)
 
     this.onStateChange({
@@ -432,6 +452,7 @@ export class GameLoop {
     this.events.clear()
     this.audio.dispose()
     this.projectileSystem.dispose()
+    this.props.dispose()
     this.engineContext.dispose()
   }
 

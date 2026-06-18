@@ -1,7 +1,9 @@
 import {
   Scene,
   TransformNode,
-  Vector3
+  Vector3,
+  Color3,
+  PBRMaterial
 } from '@babylonjs/core'
 import type { WeaponConfig } from '../../types/game'
 import { createWeaponMesh } from '../weapons/WeaponModels'
@@ -26,6 +28,16 @@ export class ProjectileSystem {
 
   spawn(startPos: Vector3, direction: Vector3, power: number, weapon: WeaponConfig): void {
     const mesh = createWeaponMesh(weapon.type, this.scene)
+    mesh.scaling = new Vector3(2, 2, 2)
+
+    mesh.getChildMeshes().forEach(child => {
+      const mat = child.material as PBRMaterial
+      if (mat) {
+        mat.emissiveColor = new Color3(1, 0.8, 0.3)
+        mat.emissiveIntensity = 0.5
+      }
+    })
+
     const spawnOffset = direction.scale(1.0)
     spawnOffset.y = 1.5
     mesh.position = startPos.add(spawnOffset)
