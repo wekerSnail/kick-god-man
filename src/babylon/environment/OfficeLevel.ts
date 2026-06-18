@@ -16,6 +16,10 @@ import bookcaseClosedUrl from '../../assets/kenney_furniture-kit/Models/GLTF for
 import lampSquareCeilingUrl from '../../assets/kenney_furniture-kit/Models/GLTF format/lampSquareCeiling.glb?url'
 import rugRectangleUrl from '../../assets/kenney_furniture-kit/Models/GLTF format/rugRectangle.glb?url'
 
+// computer 和 Keyboard 使用 public 目录
+const computerUrl = new URL('/models/computer.glb', import.meta.url).href
+const keyboardUrl = new URL('/models/Keyboard.glb', import.meta.url).href
+
 const ROOM_SIZE = 20
 const WALL_HEIGHT = 6
 
@@ -165,8 +169,7 @@ export class OfficeLevel {
       this.fallbackChair(deskParent, new Vector3(0, 0, -5.8))
     }
 
-    const screenUrl = `${import.meta.env.BASE_URL}models/computer.glb`
-    const screen = await this.assetManager.loadProp('computerScreen', screenUrl)
+    const screen = await this.assetManager.loadProp('computerScreen', computerUrl)
     const screenPlaced = this.placeProp(screen, deskParent, new Vector3(0, 0, -7.5), Math.PI, 0.5)
     if (screenPlaced) {
       screen.position.y += 1.25
@@ -175,7 +178,6 @@ export class OfficeLevel {
       this.fallbackScreen(deskParent, new Vector3(0, 0, -7.5))
     }
 
-    const keyboardUrl = `${import.meta.env.BASE_URL}models/Keyboard.glb`
     const keyboard = await this.assetManager.loadProp('computerKeyboard', keyboardUrl)
     const keyboardPlaced = this.placeProp(keyboard, deskParent, new Vector3(0, 0, -6.8), Math.PI, 0.027)
     if (keyboardPlaced) {

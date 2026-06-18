@@ -14,8 +14,8 @@ import type { AssetManager } from '../core/AssetManager'
 import type { WeaponConfig } from '../../types/game'
 import { createWeaponMesh } from '../weapons/WeaponModels'
 
-const characterModelUrl = `${import.meta.env.BASE_URL}models/characters/player.glb`
-const keyboardUrl = `${import.meta.env.BASE_URL}models/Keyboard.glb`
+const characterModelUrl = new URL('/models/characters/player.glb', import.meta.url).href
+const keyboardUrl = new URL('/models/Keyboard.glb', import.meta.url).href
 
 export class Player {
   private mesh: TransformNode

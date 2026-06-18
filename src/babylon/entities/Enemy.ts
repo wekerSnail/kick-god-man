@@ -14,7 +14,7 @@ import type { AssetManager } from '../core/AssetManager'
 import { StateMachine } from '../core/StateMachine'
 import { NormalState, AttackedState } from '../state/EnemyStates'
 
-const characterModelUrl = `${import.meta.env.BASE_URL}models/characters/boss.glb`
+const characterModelUrl = new URL('/models/characters/boss.glb', import.meta.url).href
 
 export class Enemy {
   private mesh: TransformNode
