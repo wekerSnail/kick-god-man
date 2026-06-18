@@ -1,8 +1,8 @@
 <template>
   <header class="topbar">
-    <!-- 左：体力，搪瓷圆形徽章 -->
+    <!-- 左：体力，圆润心形徽章 -->
     <div class="topbar__health">
-      <span class="topbar__label">体 力</span>
+      <span class="topbar__label">体力</span>
       <div class="health-pips">
         <span
           v-for="i in maxHealth"
@@ -13,12 +13,12 @@
       </div>
     </div>
 
-    <!-- 中：关卡，印章风格 -->
+    <!-- 中：关卡，气泡标签 -->
     <div class="topbar__level">
-      <span class="stamp">第 {{ level }} 話</span>
+      <span class="stamp">第 {{ level }} 关</span>
     </div>
 
-    <!-- 右：计分器，像素数字 -->
+    <!-- 右：计分器，圆异数字 -->
     <div class="topbar__score">
       <span class="counter">{{ padded(kickCount) }}</span>
       <span class="counter__sep">/</span>
@@ -51,23 +51,10 @@ const padded = (n: number) => String(Math.max(0, Math.floor(n))).padStart(3, '0'
   gap: var(--sp-4);
   padding: var(--sp-3) var(--sp-5);
   background: var(--paper);
-  background-image: var(--bg-paper-texture);
-  border-bottom: var(--border-double);
+  border-bottom: 2px solid rgba(84, 160, 255, 0.15);
   position: relative;
   flex-shrink: 0;
   z-index: 10;
-}
-/* 底部细虚线，仿打孔纸 */
-.topbar::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: repeating-linear-gradient(90deg, transparent 0 6px, var(--ink) 6px 8px);
-  opacity: 0.35;
-  pointer-events: none;
 }
 
 /* —— 左：体力 —— */
@@ -78,51 +65,49 @@ const padded = (n: number) => String(Math.max(0, Math.floor(n))).padStart(3, '0'
 }
 .topbar__label {
   font-family: var(--font-display);
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--ink-soft);
-  letter-spacing: 0.3em;
+  letter-spacing: 0.1em;
 }
 .health-pips {
   display: flex;
   gap: var(--sp-2);
 }
 .pip {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: var(--vermilion);
-  border: 2px solid var(--ink);
-  box-shadow: var(--shadow-hard-sm);
-  transition: all 0.25s var(--ease-office);
+  border: 2px solid rgba(255, 107, 107, 0.3);
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+  transition: all 0.3s var(--ease-stamp);
 }
 .pip--lost {
-  background: transparent;
-  border-style: dashed;
+  background: rgba(200, 196, 216, 0.3);
+  border: 2px dashed var(--paper-dark);
   box-shadow: none;
   transform: scale(0.85);
 }
 
-/* —— 中：关卡印章 —— */
+/* —— 中：关卡气泡标签 —— */
 .topbar__level {
   text-align: center;
 }
 .stamp {
   display: inline-block;
-  font-family: var(--font-stamp);
-  font-size: 22px;
-  color: var(--vermilion);
-  border: 3px double var(--vermilion);
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--paper);
+  background: linear-gradient(135deg, var(--sky), var(--lavender));
   padding: var(--sp-1) var(--sp-4);
-  transform: rotate(-3deg);
-  letter-spacing: 0.15em;
-  background: radial-gradient(
-    ellipse at 30% 40%,
-    rgba(193, 53, 28, 0.08),
-    transparent 70%
-  );
+  border-radius: var(--radius-pill);
+  letter-spacing: 0.1em;
+  box-shadow: 0 3px 12px rgba(84, 160, 255, 0.3);
 }
 
-/* —— 右：像素计分器 —— */
+/* —— 右：计分器 —— */
 .topbar__score {
   display: flex;
   align-items: baseline;
@@ -130,22 +115,24 @@ const padded = (n: number) => String(Math.max(0, Math.floor(n))).padStart(3, '0'
   justify-content: flex-end;
 }
 .counter {
-  font-family: var(--font-mono);
+  font-family: var(--font-display);
   font-size: 40px;
+  font-weight: 800;
   line-height: 1;
   color: var(--ink);
   letter-spacing: 0.05em;
-  text-shadow: 2px 2px 0 var(--amber);
 }
 .counter__sep,
 .counter__target {
-  font-family: var(--font-mono);
+  font-family: var(--font-display);
   font-size: 24px;
+  font-weight: 600;
   color: var(--paper-dark);
 }
 .counter__unit {
   font-family: var(--font-display);
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--ink-soft);
   margin-left: 4px;
   align-self: center;
@@ -168,7 +155,7 @@ const padded = (n: number) => String(Math.max(0, Math.floor(n))).padStart(3, '0'
     font-size: 32px;
   }
   .stamp {
-    font-size: 18px;
+    font-size: 15px;
   }
 }
 </style>

@@ -13,13 +13,12 @@ import {
 } from '@babylonjs/core'
 
 /**
- * 引擎上下文：负责 Engine / Scene / Camera / 灯光 / 阴影 / 后处理管线。
+ * 引擎上下文：明亮卡通风格的白天办公室。
  *
- * 设计目标：明亮、通透的「白天办公室」氛围。
- * - 天空色 / 雾色采用浅天蓝，让远景不发黑；
- * - 半球光 + 主方向光（窗外日光）+ 顶部点光（吊灯）三档组合，亮度充足；
- * - ACES 色调映射 + 高曝光，避免 PBR 材质偏暗；
- * - 关闭暗角 vignette / 胶片颗粒 grain 等夜间怪谈特效。
+ * - 天空蓝背景 + 极淡空气透视雾
+ * - 强环境光 + 暖白主光 + 冷色补光，确保无暗角
+ * - 高曝光 + 低对比度，让 PBR 材质呈现明亮糖果感
+ * - 无暗角、无胶片颗粒
  */
 export class EngineContext {
   readonly engine: Engine
@@ -41,15 +40,15 @@ export class EngineContext {
     this.engine.setHardwareScalingLevel(1 / Math.min(window.devicePixelRatio, 2))
 
     this.scene = new Scene(this.engine)
-    // 浅天蓝背景：模拟白天办公室窗外自然光
-    this.scene.clearColor = Color4.FromHexString('#AECDE8FF')
-    // 整体环境光偏白，让暗面也不会发黑
-    this.scene.ambientColor = Color3.FromHexString('#9FA8B4')
-    // 很淡的远景雾，仅做空气透视，不压暗画面
+    // 明亮天空蓝背景
+    this.scene.clearColor = Color4.FromHexString('#B8D8F8FF')
+    // 偏白环境，暗面也亮
+    this.scene.ambientColor = Color3.FromHexString('#C0C8D4')
+    // 极淡线性雾，仅做远景柔化
     this.scene.fogMode = Scene.FOGMODE_LINEAR
-    this.scene.fogColor = Color3.FromHexString('#C8D8E8')
-    this.scene.fogStart = 40
-    this.scene.fogEnd = 90
+    this.scene.fogColor = Color3.FromHexString('#D8E8F8')
+    this.scene.fogStart = 50
+    this.scene.fogEnd = 100
 
     this.camera = new FreeCamera('cam', new Vector3(0, 10, 15), this.scene)
     this.camera.setTarget(Vector3.Zero())
@@ -63,35 +62,34 @@ export class EngineContext {
   }
 
   private setupLighting(): void {
-    // 环境光：上半球偏亮白（天空），下半球偏暖（地面反射）
+    // 环境光：上半球纯白，下半球暖米色（地面反射）
     this.ambient = new HemisphericLight('hemi', Vector3.Up(), this.scene)
     this.ambient.diffuse = Color3.FromHexString('#FFFFFF')
-    this.ambient.groundColor = Color3.FromHexString('#B8A990')
-    this.ambient.intensity = 0.9
+    this.ambient.groundColor = Color3.FromHexString('#D8D0C0')
+    this.ambient.intensity = 1.0
 
-    // 主光：窗外方向光，模拟白天阳光，暖白
+    // 主光：窗外日光，暖白偏黄
     this.sun = new DirectionalLight('sun', new Vector3(-0.5, -1, 0.6), this.scene)
-    this.sun.diffuse = Color3.FromHexString('#FFF4E0')
-    this.sun.specular = Color3.FromHexString('#FFF4E0')
-    this.sun.intensity = 1.0
+    this.sun.diffuse = Color3.FromHexString('#FFF8E8')
+    this.sun.specular = Color3.FromHexString('#FFF8E8')
+    this.sun.intensity = 0.8
     this.sun.position = new Vector3(20, 30, -20)
 
-    // 室内吊灯位置参考（中央偏上），暖白补光，照亮房间中段。
-    // 用一个方向光做整体补光，避免点光衰减导致角落过暗。
+    // 补光：冷色方向光，模拟天空散射，消除暗面
     const fill = new DirectionalLight('fill', new Vector3(0.2, -1, -0.3), this.scene)
-    fill.diffuse = Color3.FromHexString('#E8F0FF')
-    fill.specular = Color3.FromHexString('#E8F0FF')
-    fill.intensity = 0.4
+    fill.diffuse = Color3.FromHexString('#E8F4FF')
+    fill.specular = Color3.FromHexString('#E8F4FF')
+    fill.intensity = 0.5
     fill.position = new Vector3(-10, 20, 15)
   }
 
   private setupShadow(): ShadowGenerator {
-    // 用主方向光投影，PCF 软阴影，darkness 适中不要过黑
     const shadowGen = new ShadowGenerator(2048, this.sun)
     shadowGen.usePercentageCloserFiltering = true
     shadowGen.bias = 0.01
     shadowGen.normalBias = 0.02
-    shadowGen.darkness = 0.35
+    // 卡通风：阴影很浅，不要压暗画面
+    shadowGen.darkness = 0.2
     return shadowGen
   }
 
@@ -99,13 +97,13 @@ export class EngineContext {
     const p = new DefaultRenderingPipeline('pipeline', true, this.scene, [this.camera])
     p.imageProcessing.toneMappingEnabled = true
     p.imageProcessing.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES
-    // 提高曝光让 PBR 材质更明亮
-    p.imageProcessing.exposure = 1.5
-    // 对比度回到接近中性，避免画面发灰或发暗
-    p.imageProcessing.contrast = 1.02
+    // 高曝光保持明亮
+    p.imageProcessing.exposure = 1.6
+    // 接近中性对比度
+    p.imageProcessing.contrast = 1.0
+    // 关闭暗角和颗粒（夜间效果）
     p.imageProcessing.vignetteEnabled = false
     p.fxaaEnabled = true
-    // 关闭胶片颗粒（夜间怪谈特效，白天办公室不需要）
     p.grainEnabled = false
     return p
   }

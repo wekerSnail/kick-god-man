@@ -108,7 +108,7 @@ export class HidingSpots {
     pot.position.y = 0.3
     pot.parent = parent
     const potMat = new PBRMaterial('potMat', this.scene)
-    potMat.albedoColor = Color3.FromHexString('#A0522D')
+    potMat.albedoColor = Color3.FromHexString('#CD853F')
     pot.material = potMat
 
     const trunk = MeshBuilder.CreateCylinder('trunk', {
@@ -119,11 +119,11 @@ export class HidingSpots {
     trunk.position.y = 1.1
     trunk.parent = parent
     const trunkMat = new PBRMaterial('trunkMat', this.scene)
-    trunkMat.albedoColor = Color3.FromHexString('#8B5A2B')
+    trunkMat.albedoColor = Color3.FromHexString('#A0724A')
     trunk.material = trunkMat
 
     const leafMat = new PBRMaterial('leafMat', this.scene)
-    leafMat.albedoColor = Color3.FromHexString('#4CAF50')
+    leafMat.albedoColor = Color3.FromHexString('#66BB6A')
     const leafPositions = [
       new Vector3(0, 1.8, 0),
       new Vector3(0.3, 1.6, 0.2),
@@ -144,7 +144,7 @@ export class HidingSpots {
 
   private fallbackCabinet(parent: TransformNode): void {
     const mat = new PBRMaterial('fallbackCabinetMat', this.scene)
-    mat.albedoColor = Color3.FromHexString('#B8B0A0')
+    mat.albedoColor = Color3.FromHexString('#C8C0B0')
     mat.roughness = 0.8
     const body = MeshBuilder.CreateBox('fallbackCabinet', {
       width: 2,
@@ -159,7 +159,7 @@ export class HidingSpots {
 
   private fallbackSofa(parent: TransformNode): void {
     const mat = new PBRMaterial('fallbackSofaMat', this.scene)
-    mat.albedoColor = Color3.FromHexString('#5A7A9A')
+    mat.albedoColor = Color3.FromHexString('#6B9AC4')
     mat.roughness = 0.9
     const seat = MeshBuilder.CreateBox('seat', {
       width: 3,

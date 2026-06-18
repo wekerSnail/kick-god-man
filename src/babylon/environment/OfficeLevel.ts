@@ -11,12 +11,10 @@ import {
 import type { AssetManager } from '../core/AssetManager'
 
 /**
- * 办公室关卡：地板、墙壁、神人办公工位。
+ * 办公室关卡：地板、墙壁、神人办公工位（卡通休闲风格）。
  *
  * 家具优先加载 Kenney furniture-kit 的真实 GLB 模型；若加载失败则回退到
- * 明亮的程序化几何体，保证任何情况下场景都不会「黑掉」。
- *
- * Kenney furniture-kit 模型为 ~1.7m 真实尺度，统一按目标高度缩放对齐。
+ * 明亮鲜艳的程序化几何体。
  */
 const FURNITURE_BASE = '/src/assets/kenney_furniture-kit/Models/GLB format'
 
@@ -43,10 +41,10 @@ export class OfficeLevel {
       width: 30,
       height: 30
     }, this.scene)
-    // 浅色办公地毯 / 浅木地板：明亮的中性灰米色
+    // 明亮浅木地板，卡通风格
     const mat = new PBRMaterial('groundMat', this.scene)
-    mat.albedoColor = Color3.FromHexString('#C9B79A')
-    mat.roughness = 0.95
+    mat.albedoColor = Color3.FromHexString('#E8D8B8')
+    mat.roughness = 0.9
     mat.metallic = 0.0
     ground.material = mat
     ground.receiveShadows = true
@@ -54,9 +52,9 @@ export class OfficeLevel {
   }
 
   private createWalls(): void {
-    // 明亮的办公室墙：浅米白
+    // 明亮卡通墙壁：纯白微蓝
     const wallMat = new PBRMaterial('wallMat', this.scene)
-    wallMat.albedoColor = Color3.FromHexString('#F2EFE8')
+    wallMat.albedoColor = Color3.FromHexString('#F8FAFF')
     wallMat.roughness = 1.0
     wallMat.metallic = 0.0
 
@@ -87,9 +85,9 @@ export class OfficeLevel {
     rightWall.material = wallMat
     rightWall.receiveShadows = true
 
-    // 踢脚线：浅色木质
+    // 踢脚线：明亮浅木色
     const baseboardMat = new PBRMaterial('baseboardMat', this.scene)
-    baseboardMat.albedoColor = Color3.FromHexString('#D8CDB8')
+    baseboardMat.albedoColor = Color3.FromHexString('#E0D4BE')
     baseboardMat.roughness = 0.8
 
     const baseboardBack = MeshBuilder.CreateBox('baseboardBack', {
@@ -223,7 +221,7 @@ export class OfficeLevel {
       rugMesh.position = new Vector3(0, 0.01, -9.5)
       rugMesh.parent = deskParent
       const rugMat = new PBRMaterial('fallbackRugMat', this.scene)
-      rugMat.albedoColor = Color3.FromHexString('#8FA8C9')
+      rugMat.albedoColor = Color3.FromHexString('#A8C8E8')
       rugMat.roughness = 1.0
       rugMesh.material = rugMat
     }
@@ -233,9 +231,9 @@ export class OfficeLevel {
 
   private fallbackDesk(parent: TransformNode, pos: Vector3): void {
     const deskMat = new PBRMaterial('fallbackDeskMat', this.scene)
-    deskMat.albedoColor = Color3.FromHexString('#C9A97A')
+    deskMat.albedoColor = Color3.FromHexString('#DEB887')
     deskMat.roughness = 0.7
-    deskMat.metallic = 0.1
+    deskMat.metallic = 0.0
 
     const top = MeshBuilder.CreateBox('fallbackDeskTop', {
       width: 2.0,
@@ -269,7 +267,7 @@ export class OfficeLevel {
 
   private fallbackChair(parent: TransformNode, pos: Vector3): void {
     const mat = new PBRMaterial('fallbackChairMat', this.scene)
-    mat.albedoColor = Color3.FromHexString('#2F2F2F')
+    mat.albedoColor = Color3.FromHexString('#5A7A9A')
     mat.roughness = 0.6
     const seat = MeshBuilder.CreateBox('fallbackChairSeat', {
       width: 0.55,
@@ -291,9 +289,9 @@ export class OfficeLevel {
 
   private fallbackScreen(parent: TransformNode, pos: Vector3): void {
     const frame = new PBRMaterial('fallbackFrameMat', this.scene)
-    frame.albedoColor = Color3.FromHexString('#2A2A2A')
+    frame.albedoColor = Color3.FromHexString('#4A5568')
     frame.roughness = 0.4
-    frame.metallic = 0.6
+    frame.metallic = 0.3
     const screen = MeshBuilder.CreateBox('fallbackScreen', {
       width: 0.85,
       height: 0.5,
@@ -310,15 +308,15 @@ export class OfficeLevel {
     panel.position = new Vector3(pos.x, 1.45, pos.z - 0.025)
     panel.parent = parent
     const panelMat = new PBRMaterial('fallbackScreenPanelMat', this.scene)
-    panelMat.albedoColor = Color3.FromHexString('#0A2A4A')
-    panelMat.emissiveColor = Color3.FromHexString('#1E6FBF')
+    panelMat.albedoColor = Color3.FromHexString('#1A3A5A')
+    panelMat.emissiveColor = Color3.FromHexString('#2E86DE')
     panelMat.roughness = 0.2
     panel.material = panelMat
   }
 
   private fallbackKeyboard(parent: TransformNode, pos: Vector3): void {
     const mat = new PBRMaterial('fallbackKeyboardMat', this.scene)
-    mat.albedoColor = Color3.FromHexString('#3A3A3A')
+    mat.albedoColor = Color3.FromHexString('#6B7280')
     mat.roughness = 0.6
     const kb = MeshBuilder.CreateBox('fallbackKeyboard', {
       width: 0.5,
@@ -332,7 +330,7 @@ export class OfficeLevel {
 
   private fallbackBookcase(parent: TransformNode, pos: Vector3): void {
     const mat = new PBRMaterial('fallbackBookcaseMat', this.scene)
-    mat.albedoColor = Color3.FromHexString('#A07A4A')
+    mat.albedoColor = Color3.FromHexString('#C4A06A')
     mat.roughness = 0.7
     const body = MeshBuilder.CreateBox('fallbackBookcase', {
       width: 1.4,

@@ -49,12 +49,10 @@ const props = defineProps<{
   useProp: (index: number) => void
 }>()
 
-// 三格固定槽位
 const slots = computed<(InventorySlot | null)[]>(() =>
   [0, 1, 2].map((i) => props.inventory[i] ?? null)
 )
 
-// 顶部提示文案：复刻旧逻辑但用克制的语气
 const hint = computed(() => {
   if (props.isChargingThrow) return '蓄力中 … 松开右键掷出'
   const w = props.equippedWeapon
@@ -64,44 +62,44 @@ const hint = computed(() => {
   return '鼠标左键 — 踹击'
 })
 
-// 单字汉字图标替代 emoji —— 昭和文具印刷感的核心
+// emoji 图标，更直观有趣
 const ICON_MAP: Record<string, { char: string; accent: string }> = {
-  speed: { char: '走', accent: 'var(--moss)' },
-  invisible: { char: '霧', accent: 'var(--steel)' },
-  noise: { char: '騒', accent: 'var(--amber)' },
-  combo: { char: '連', accent: 'var(--vermilion)' },
-  mace: { char: '鎚', accent: 'var(--ink)' },
-  bat: { char: '棒', accent: 'var(--ink)' },
-  frying_pan: { char: '鍋', accent: 'var(--ink)' },
-  ruler: { char: '尺', accent: 'var(--ink)' },
+  speed: { char: '👟', accent: 'var(--moss)' },
+  invisible: { char: '👻', accent: 'var(--steel)' },
+  noise: { char: '📢', accent: 'var(--amber)' },
+  combo: { char: '🥊', accent: 'var(--vermilion)' },
+  mace: { char: '🏏', accent: 'var(--sky)' },
+  bat: { char: '⚾', accent: 'var(--amber)' },
+  frying_pan: { char: '🍳', accent: 'var(--ink-soft)' },
+  ruler: { char: '📏', accent: 'var(--mint)' },
 }
-const iconCharOf = (t: string) => ICON_MAP[t]?.char ?? '？'
+const iconCharOf = (t: string) => ICON_MAP[t]?.char ?? '❓'
 const accentOf = (t: string) => ICON_MAP[t]?.accent ?? 'var(--ink)'
 </script>
 
 <style scoped>
 .inventory {
   background: var(--paper-warm);
-  background-image: var(--bg-paper-texture);
   padding: var(--sp-3) var(--sp-5);
-  border-top: var(--border-double);
+  border-top: 2px solid rgba(84, 160, 255, 0.1);
   flex-shrink: 0;
 }
 
 .inventory__hint {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 13px;
+  font-weight: 600;
   color: var(--ink-soft);
   margin-bottom: var(--sp-2);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.02em;
   min-height: 18px;
 }
 .hint-text {
-  animation: hint-blink 1.6s var(--ease-office) infinite;
+  animation: hint-blink 2s ease infinite;
 }
 @keyframes hint-blink {
   0%, 70% { opacity: 1; }
-  85% { opacity: 0.35; }
+  85% { opacity: 0.5; }
 }
 
 .inventory__slots {
@@ -114,7 +112,8 @@ const accentOf = (t: string) => ICON_MAP[t]?.accent ?? 'var(--ink)'
   width: 72px;
   height: 72px;
   background: var(--paper);
-  border: var(--border-dashed);
+  border: 2px dashed var(--paper-dark);
+  border-radius: var(--radius-soft);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -122,32 +121,34 @@ const accentOf = (t: string) => ICON_MAP[t]?.accent ?? 'var(--ink)'
   gap: 2px;
   cursor: pointer;
   padding: 0;
-  transition: transform 0.12s var(--ease-office), box-shadow 0.12s var(--ease-office);
+  transition: transform 0.2s var(--ease-stamp), box-shadow 0.2s var(--ease-stamp);
   font-family: var(--font-body);
   color: var(--ink);
 }
 .slot:not(.slot--empty):not(:disabled) {
-  border: var(--border-solid);
+  border: 2px solid rgba(84, 160, 255, 0.2);
   box-shadow: var(--shadow-hard-sm);
 }
 .slot:not(.slot--empty):hover {
-  transform: translate(-2px, -2px);
-  box-shadow: var(--shadow-hard);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: var(--shadow-glow);
 }
 .slot:active {
-  transform: translate(1px, 1px);
+  transform: translateY(1px) scale(0.98);
   box-shadow: var(--shadow-press);
 }
 .slot--empty {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: default;
 }
 .slot--weapon {
-  border-color: var(--vermilion);
+  border-color: var(--sky) !important;
   border-width: 2px;
+  border-style: solid;
+  box-shadow: 0 2px 12px rgba(84, 160, 255, 0.2);
 }
 .slot--active {
-  animation: slot-active 1s var(--ease-office) infinite;
+  animation: slot-active 1s ease infinite;
 }
 @keyframes slot-active {
   0%, 100% {
@@ -155,45 +156,46 @@ const accentOf = (t: string) => ICON_MAP[t]?.accent ?? 'var(--ink)'
     color: var(--ink);
   }
   50% {
-    background: var(--moss-dark);
-    color: var(--bone);
+    background: var(--mint);
+    color: var(--paper);
   }
 }
 
 .slot__icon {
-  font-family: var(--font-display);
-  font-size: 30px;
-  font-weight: 700;
-  color: var(--accent, var(--ink));
+  font-size: 28px;
   line-height: 1;
 }
 .slot__name {
   font-family: var(--font-body);
   font-size: 10px;
+  font-weight: 600;
   color: var(--ink-soft);
   letter-spacing: 0.02em;
 }
 .slot--active .slot__name {
-  color: var(--bone);
+  color: var(--paper);
 }
 .slot__count {
   position: absolute;
   top: -6px;
   left: -6px;
   background: var(--vermilion);
-  color: var(--bone);
-  font-family: var(--font-mono);
-  font-size: 12px;
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
   line-height: 1;
-  padding: 2px 5px;
-  border: 1px solid var(--ink);
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  box-shadow: 0 2px 6px rgba(255, 107, 107, 0.3);
 }
 .slot__key {
   position: absolute;
   top: 4px;
   right: 6px;
-  font-family: var(--font-mono);
-  font-size: 12px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
   color: var(--paper-dark);
 }
 
@@ -206,7 +208,7 @@ const accentOf = (t: string) => ICON_MAP[t]?.accent ?? 'var(--ink)'
     height: 56px;
   }
   .slot__icon {
-    font-size: 24px;
+    font-size: 22px;
   }
 }
 </style>

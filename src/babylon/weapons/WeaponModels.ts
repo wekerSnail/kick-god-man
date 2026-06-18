@@ -36,7 +36,7 @@ function createMaceMesh(scene: Scene): TransformNode {
   handle.position.y = 0
   handle.parent = group
   const handleMat = new PBRMaterial('maceHandleMat', scene)
-  handleMat.albedoColor = Color3.FromHexString('#8B4513')
+  handleMat.albedoColor = Color3.FromHexString('#A0724A')
   handle.material = handleMat
 
   const head = MeshBuilder.CreateSphere('head', {
@@ -46,11 +46,11 @@ function createMaceMesh(scene: Scene): TransformNode {
   head.position.y = 0.45
   head.parent = group
   const headMat = new PBRMaterial('maceHeadMat', scene)
-  headMat.albedoColor = Color3.FromHexString('#666666')
+  headMat.albedoColor = Color3.FromHexString('#7A8A9A')
   head.material = headMat
 
   const spikeMat = new PBRMaterial('spikeMat', scene)
-  spikeMat.albedoColor = Color3.FromHexString('#888888')
+  spikeMat.albedoColor = Color3.FromHexString('#9AA8B8')
 
   for (let i = 0; i < 8; i++) {
     const angle = (i / 8) * Math.PI * 2
@@ -86,7 +86,7 @@ function createBatMesh(scene: Scene): TransformNode {
   bat.position.y = 0.1
   bat.parent = group
   const batMat = new PBRMaterial('batMat', scene)
-  batMat.albedoColor = Color3.FromHexString('#CD853F')
+  batMat.albedoColor = Color3.FromHexString('#DEB887')
   bat.material = batMat
 
   const grip = MeshBuilder.CreateCylinder('grip', {
@@ -97,7 +97,7 @@ function createBatMesh(scene: Scene): TransformNode {
   grip.position.y = -0.3
   grip.parent = group
   const gripMat = new PBRMaterial('gripMat', scene)
-  gripMat.albedoColor = Color3.FromHexString('#333333')
+  gripMat.albedoColor = Color3.FromHexString('#4A5568')
   grip.material = gripMat
 
   return group
@@ -114,7 +114,7 @@ function createFryingPanMesh(scene: Scene): TransformNode {
   pan.position.y = 0.15
   pan.parent = group
   const panMat = new PBRMaterial('panMat', scene)
-  panMat.albedoColor = Color3.FromHexString('#444444')
+  panMat.albedoColor = Color3.FromHexString('#6B7280')
   pan.material = panMat
 
   const handle = MeshBuilder.CreateCylinder('handle', {
@@ -126,7 +126,7 @@ function createFryingPanMesh(scene: Scene): TransformNode {
   handle.rotation.z = Math.PI / 2
   handle.parent = group
   const handleMat = new PBRMaterial('panHandleMat', scene)
-  handleMat.albedoColor = Color3.FromHexString('#8B4513')
+  handleMat.albedoColor = Color3.FromHexString('#A0724A')
   handle.material = handleMat
 
   return group
@@ -187,10 +187,10 @@ export function createWeaponPickupMesh(type: PropType, scene: Scene): TransformN
 
 function getWeaponColor(type: PropType): Color3 {
   switch (type) {
-    case 'mace': return Color3.FromHexString('#FF4444')
-    case 'bat': return Color3.FromHexString('#CD853F')
-    case 'frying_pan': return Color3.FromHexString('#444444')
-    case 'ruler': return Color3.FromHexString('#DEB887')
+    case 'mace': return Color3.FromHexString('#FF6B6B')
+    case 'bat': return Color3.FromHexString('#FFD166')
+    case 'frying_pan': return Color3.FromHexString('#A4B0BE')
+    case 'ruler': return Color3.FromHexString('#54A0FF')
     default: return Color3.White()
   }
 }

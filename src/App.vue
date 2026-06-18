@@ -16,13 +16,13 @@ import Game from './components/Game.vue'
 }
 
 body {
-  background: #f0f4f8;
+  background: #E8F0FE;
   margin: 0;
   padding: 0;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  font-family: 'Nunito', 'Microsoft YaHei', sans-serif;
 }
 
 .game-container {

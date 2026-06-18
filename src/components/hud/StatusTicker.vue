@@ -20,10 +20,10 @@
 
     <!-- 躲藏 / 隐身 -->
     <div v-if="isHidden" class="ticker__block">
-      <span class="ticker__val val--moss">■ 躲藏中</span>
+      <span class="ticker__val val--moss">🟢 躲藏中</span>
     </div>
     <div v-if="invisibleActive" class="ticker__block">
-      <span class="ticker__val val--steel">■ 隐身中</span>
+      <span class="ticker__val val--steel">👻 隐身中</span>
     </div>
   </div>
 </template>
@@ -52,26 +52,24 @@ const potClass = computed(() =>
 )
 
 const attackText = computed(() => {
-  if (props.comboActive) return '連 擊 中'
+  if (props.comboActive) return '连击中！'
   if (props.attackCooldown > 0) return `冷却 ${Math.ceil(props.attackCooldown)}s`
-  return '就 绪'
+  return '就绪'
 })
 const attackClass = computed(() =>
   props.comboActive ? 'val--combo' : props.attackCooldown > 0 ? 'val--danger' : 'val--ready'
 )
 
-// 神人状态文案 —— 不再用 emoji
 const ENEMY_TEXT: Record<string, string> = {
-  normal: '面 对 屏 幕',
-  phone_flashing: '手 机 闪 烁 ！',
-  looking_back: '回 头 检 查 ！！',
-  stunned: '眩 晕 中',
-  meeting: '开 会 中 · 攻 击 无 效',
-  patrolling: '巡 查 中 · 快 躲 好',
+  normal: '面对屏幕',
+  phone_flashing: '手机闪烁！',
+  looking_back: '回头检查！！',
+  stunned: '眩晕中',
+  meeting: '开会中 · 攻击无效',
+  patrolling: '巡查中 · 快躲好',
 }
 const enemyText = computed(() => ENEMY_TEXT[props.enemyState] ?? '─')
 
-// 整体危险等级 —— 影响整条 ticker 的底色
 const threatLevel = computed(() => {
   switch (props.enemyState) {
     case 'looking_back':
@@ -89,29 +87,31 @@ const threatLevel = computed(() => {
 
 <style scoped>
 .ticker {
-  background: var(--ink);
-  color: var(--paper);
-  font-family: var(--font-mono);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
   font-size: 14px;
-  letter-spacing: 0.05em;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   padding: var(--sp-2) var(--sp-5);
-  border-top: var(--border-double);
+  border-top: 2px solid rgba(84, 160, 255, 0.1);
   display: flex;
   gap: var(--sp-5);
   align-items: center;
   flex-wrap: wrap;
   flex-shrink: 0;
-  transition: background 0.25s var(--ease-office);
+  transition: background 0.3s var(--ease-office);
 }
-/* 危险等级让整条 ticker 染色，但保持克制 */
+
+/* 危险等级柔和渐变底色 */
 .ticker--warn {
-  background: linear-gradient(90deg, var(--ink) 0%, var(--ink) 70%, rgba(200, 144, 44, 0.25) 100%);
+  background: linear-gradient(90deg, var(--paper) 0%, var(--paper) 70%, rgba(255, 209, 102, 0.2) 100%);
 }
 .ticker--danger {
-  background: linear-gradient(90deg, var(--ink) 0%, var(--ink) 60%, rgba(193, 53, 28, 0.35) 100%);
+  background: linear-gradient(90deg, var(--paper) 0%, var(--paper) 50%, rgba(255, 107, 107, 0.15) 100%);
 }
 .ticker--meeting {
-  background: linear-gradient(90deg, var(--ink) 0%, var(--ink) 50%, rgba(232, 74, 28, 0.3) 100%);
+  background: linear-gradient(90deg, var(--paper) 0%, var(--paper) 50%, rgba(255, 159, 67, 0.15) 100%);
 }
 
 .ticker__block {
@@ -120,51 +120,53 @@ const threatLevel = computed(() => {
   gap: var(--sp-2);
 }
 .ticker__block::before {
-  content: '>';
+  content: '●';
   color: var(--moss);
   margin-right: 4px;
+  font-size: 8px;
 }
 .ticker__key {
-  color: var(--paper-dark);
+  color: var(--ink-soft);
   text-transform: uppercase;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.1em;
   font-size: 12px;
+  font-weight: 600;
 }
 .ticker__val {
-  font-weight: bold;
-  color: var(--paper);
+  font-weight: 700;
+  color: var(--ink);
 }
 
 .val--ready { color: var(--moss); }
-.val--warn { color: var(--amber-glow); animation: warn-blink 0.8s steps(2) infinite; }
-.val--danger { color: var(--vermilion-bright); animation: danger-blink 0.4s steps(2) infinite; }
-.val--combo { color: var(--amber-glow); animation: combo-shake 0.3s var(--ease-office) infinite; }
+.val--warn { color: var(--amber); animation: warn-blink 0.8s ease infinite; }
+.val--danger { color: var(--vermilion-bright); animation: danger-blink 0.4s ease infinite; }
+.val--combo { color: var(--amber); animation: combo-shake 0.3s var(--ease-office) infinite; }
 .val--moss { color: var(--moss); }
 .val--steel { color: var(--steel); }
 
 @keyframes warn-blink { 50% { opacity: 0.4; } }
-@keyframes danger-blink { 50% { opacity: 0.2; } }
+@keyframes danger-blink { 50% { opacity: 0.3; } }
 @keyframes combo-shake {
   0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-1px); }
-  75% { transform: translateX(1px); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
 }
 
-/* 神人状态单独着色 */
-.enemy--normal .ticker__val { color: var(--paper-dark); }
+/* 神人状态着色 */
+.enemy--normal .ticker__val { color: var(--ink-soft); }
 .enemy--phone_flashing .ticker__val {
-  color: var(--amber-glow);
-  animation: warn-blink 0.6s steps(2) infinite;
+  color: var(--amber);
+  animation: warn-blink 0.6s ease infinite;
 }
 .enemy--looking_back .ticker__val {
   color: var(--vermilion-bright);
-  animation: danger-blink 0.3s steps(2) infinite;
+  animation: danger-blink 0.3s ease infinite;
 }
-.enemy--stunned .ticker__val { color: var(--amber); }
-.enemy--meeting .ticker__val { color: var(--vermilion-bright); }
+.enemy--stunned .ticker__val { color: var(--lavender); }
+.enemy--meeting .ticker__val { color: var(--amber); }
 .enemy--patrolling .ticker__val {
-  color: var(--amber-glow);
-  animation: warn-blink 0.5s steps(2) infinite;
+  color: var(--vermilion);
+  animation: warn-blink 0.5s ease infinite;
 }
 
 @media (max-width: 640px) {
