@@ -124,6 +124,10 @@ export class AttackedState implements IState<Enemy> {
     }
     return null
   }
+
+  exit(ctx: Enemy): void {
+    ctx.resetWalking()
+  }
 }
 
 export class PhoneFlashingState implements IState<Enemy> {

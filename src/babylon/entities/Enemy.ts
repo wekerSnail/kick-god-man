@@ -120,15 +120,22 @@ export class Enemy {
 
   playAnimation(name: string, loop: boolean = true): void {
     if (this.currentAnimName === name) return
-    this.currentAnimName = name
     this.animationGroups.forEach(ag => ag.stop())
+    this.currentAnimName = name
     const anim = this.animationGroups.find(ag =>
       ag.name.toLowerCase().includes(name.toLowerCase())
     )
     if (anim) {
       anim.loopAnimation = loop
+      anim.reset()
       anim.start()
+    } else {
+      this.currentAnimName = ''
     }
+  }
+
+  resetWalking(): void {
+    this.isWalking = false
   }
 
   showExclamation(show: boolean): void {
