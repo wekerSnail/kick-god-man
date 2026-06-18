@@ -6,11 +6,13 @@ import {
   AnimationGroup,
   ShadowGenerator,
   PointLight,
-  Sprite
+  Sprite,
+  SpriteManager,
+  DynamicTexture
 } from '@babylonjs/core'
 import type { AssetManager } from '../core/AssetManager'
 import { StateMachine } from '../core/StateMachine'
-import { NormalState } from '../state/EnemyStates'
+import { NormalState, AttackedState } from '../state/EnemyStates'
 
 const characterModelUrl = `${import.meta.env.BASE_URL}models/characters/boss.glb`
 
@@ -18,7 +20,7 @@ export class Enemy {
   private mesh: TransformNode
   private characterGroup: TransformNode
   private modelRoot: TransformNode | null = null
-  private position: Vector3
+  position: Vector3
   private originalPosition: Vector3
   private scene: Scene
   private animationGroups: AnimationGroup[] = []
@@ -37,6 +39,14 @@ export class Enemy {
   private patrolTextSprite: Sprite | null = null
   private patrolWaypoints: Vector3[] = []
   private currentWaypointIndex: number = 0
+
+  private exclSpriteManager: SpriteManager | null = null
+  private exclSprite: Sprite | null = null
+  private dialogueSpriteManager: SpriteManager | null = null
+  private dialogueSprite: Sprite | null = null
+  private dialogueDynamicTexture: DynamicTexture | null = null
+  private _playerDetectedDuringAttack: boolean = false
+  private _playerUsingKeyboardDuringAttack: boolean = false
 
   constructor(
     scene: Scene,
@@ -105,7 +115,7 @@ export class Enemy {
     this.updateWalkAnimation(delta)
   }
 
-  private playAnimation(name: string, loop: boolean = true): void {
+  playAnimation(name: string, loop: boolean = true): void {
     if (this.currentAnimName === name) return
     this.currentAnimName = name
     this.animationGroups.forEach(ag => ag.stop())
@@ -116,6 +126,92 @@ export class Enemy {
       anim.loopAnimation = loop
       anim.start()
     }
+  }
+
+  showExclamation(show: boolean): void {
+    if (show) {
+      if (!this.exclSpriteManager) {
+        const tex = new DynamicTexture('exclTex', { width: 128, height: 128 }, this.scene, false)
+        const ctx = tex.getContext() as any
+        ctx.fillStyle = '#FF0000'
+        ctx.font = 'bold 100px Arial'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText('!', 64, 64)
+        tex.update()
+
+        this.exclSpriteManager = new SpriteManager('exclMgr', '', 1, 128, this.scene)
+        this.exclSpriteManager.texture = tex
+      }
+      if (!this.exclSprite) {
+        this.exclSprite = new Sprite('excl', this.exclSpriteManager)
+        this.exclSprite.width = 0.8
+        this.exclSprite.height = 0.8
+        this.exclSprite.invertV = true
+      }
+      this.exclSprite.position = new Vector3(this.position.x, this.position.y + 2.8, this.position.z)
+      this.exclSprite.isVisible = true
+    } else {
+      if (this.exclSprite) {
+        this.exclSprite.isVisible = false
+      }
+    }
+  }
+
+  showDialogue(text: string, duration: number = 3): void {
+    if (!this.dialogueSpriteManager) {
+      this.dialogueDynamicTexture = new DynamicTexture('dialogueTex', { width: 512, height: 128 }, this.scene, false)
+      this.dialogueSpriteManager = new SpriteManager('dialogueMgr', '', 1, { width: 512, height: 128 }, this.scene)
+      this.dialogueSpriteManager.texture = this.dialogueDynamicTexture
+    }
+
+    if (!this.dialogueSprite) {
+      this.dialogueSprite = new Sprite('dialogue', this.dialogueSpriteManager)
+      this.dialogueSprite.width = 4
+      this.dialogueSprite.height = 1
+      this.dialogueSprite.invertV = true
+    }
+
+    const ctx = this.dialogueDynamicTexture!.getContext() as any
+    ctx.fillStyle = '#FFFFFF'
+    ctx.fillRect(0, 0, 512, 128)
+
+    ctx.fillStyle = '#333333'
+    ctx.font = 'bold 32px Arial'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+
+    const lines = this.wrapText(text, 12)
+    const lineHeight = 40
+    const startY = 64 - (lines.length - 1) * lineHeight / 2
+    lines.forEach((line, i) => {
+      ctx.fillText(line, 256, startY + i * lineHeight)
+    })
+
+    this.dialogueDynamicTexture!.update()
+
+    this.dialogueSprite.position = new Vector3(this.position.x, this.position.y + 3.4, this.position.z)
+    this.dialogueSprite.isVisible = true
+
+    setTimeout(() => {
+      if (this.dialogueSprite) {
+        this.dialogueSprite.isVisible = false
+      }
+    }, duration * 1000)
+  }
+
+  private wrapText(text: string, maxChars: number): string[] {
+    const lines: string[] = []
+    let current = ''
+    for (const char of text) {
+      current += char
+      if (current.length >= maxChars) {
+        lines.push(current)
+        current = ''
+      }
+    }
+    if (current) lines.push(current)
+    return lines
   }
 
   scheduleNextLookBack(): void {
@@ -277,6 +373,30 @@ export class Enemy {
   reportPatrolDamage(): void {
   }
 
+  onAttacked(playerPosition: Vector3, playerIsUsingKeyboard: boolean): void {
+    this._playerDetectedDuringAttack = false
+    this._playerUsingKeyboardDuringAttack = playerIsUsingKeyboard
+    this.stateMachine.forceState(new AttackedState(), playerPosition)
+  }
+
+  setPlayerDetected(detected: boolean): void {
+    this._playerDetectedDuringAttack = detected
+  }
+
+  setPlayerUsingKeyboard(using: boolean): void {
+    this._playerUsingKeyboardDuringAttack = using
+  }
+
+  isPlayerUsingKeyboard(): boolean {
+    return this._playerUsingKeyboardDuringAttack
+  }
+
+  consumePlayerDetected(): boolean {
+    const result = this._playerDetectedDuringAttack
+    this._playerDetectedDuringAttack = false
+    return result
+  }
+
   get nextLookBackTime(): number {
     return this._nextLookBackTime
   }
@@ -327,6 +447,21 @@ export class Enemy {
 
   getHeadPosition(): Vector3 {
     return new Vector3(this.position.x, this.position.y + 2, this.position.z)
+  }
+
+  setRotationY(angle: number): void {
+    this.mesh.rotation.y = angle
+  }
+
+  getRotationY(): number {
+    return this.mesh.rotation.y
+  }
+
+  rotateTowards(targetAngle: number, speed: number, dt: number): void {
+    const current = this.mesh.rotation.y
+    const diff = targetAngle - current
+    const normalizedDiff = Math.atan2(Math.sin(diff), Math.cos(diff))
+    this.mesh.rotation.y += normalizedDiff * speed * dt
   }
 
   dispose(): void {

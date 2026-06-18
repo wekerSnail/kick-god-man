@@ -58,18 +58,19 @@ export class GameLoop {
   private patrolDamageCooldown: number = 0
   private wasPatrolling: boolean = false
   private _clickHandler: (() => void) | null = null
+  private canvas: HTMLCanvasElement | null = null
 
   constructor(container: HTMLElement, onStateChange: (state: any) => void) {
     this.onStateChange = onStateChange
     this.events = new EventBus()
     this.input = new InputManager()
 
-    const canvas = document.createElement('canvas')
-    canvas.style.width = '100%'
-    canvas.style.height = '100%'
-    container.appendChild(canvas)
+    this.canvas = document.createElement('canvas')
+    this.canvas.style.width = '100%'
+    this.canvas.style.height = '100%'
+    container.appendChild(this.canvas)
 
-    this.engineContext = new EngineContext(canvas)
+    this.engineContext = new EngineContext(this.canvas)
     this.scene = this.engineContext.scene
     this.camera = this.engineContext.camera
 
@@ -103,7 +104,9 @@ export class GameLoop {
     )
 
     this._clickHandler = () => this.player.kick()
-    document.addEventListener('click', this._clickHandler)
+    setTimeout(() => {
+      document.addEventListener('click', this._clickHandler!)
+    }, 100)
 
     this.inventory.push({
       id: 'starter-mace',
@@ -116,6 +119,7 @@ export class GameLoop {
       category: 'weapon',
       count: 1
     })
+
   }
 
   start(): void {
@@ -244,6 +248,7 @@ export class GameLoop {
             }
             this.player.unequipWeapon()
             this.levelManager.onKick(this.kickCount)
+            this.enemy.onAttacked(this.player.getPosition(), this.player.getPotActive())
           }
         } else if (this.player.getIsKicking() && distance < 2) {
           this.kickCount++
@@ -253,12 +258,30 @@ export class GameLoop {
           if (this.levelManager.onKick(this.kickCount)) {
             this.createVictoryParticles()
           }
+          this.enemy.onAttacked(this.player.getPosition(), this.player.getPotActive())
         }
       }
     }
 
     if (!this.player.getIsKicking() && !this.player.getIsSwinging()) {
       this.kickCounted = false
+    }
+
+    if (this.enemy.consumePlayerDetected()) {
+      if (this.player.getPotActive()) {
+        this.health -= 0.5
+      } else {
+        this.health -= 1
+      }
+      this.audio.play('hit')
+      if (this.health <= 0) {
+        this.health = 0
+        this.gameOver(false)
+      }
+    }
+
+    if (this.enemy.getState() === 'attacked') {
+      this.enemy.setPlayerUsingKeyboard(this.player.getPotActive())
     }
 
     if (this.input.isActionJustPressed('throwWeapon')) {
@@ -382,6 +405,10 @@ export class GameLoop {
   dispose(): void {
     if (this._clickHandler) {
       document.removeEventListener('click', this._clickHandler)
+    }
+    if (this.canvas?.parentNode) {
+      this.canvas.parentNode.removeChild(this.canvas)
+      this.canvas = null
     }
     this.player.dispose()
     this.enemy.dispose()

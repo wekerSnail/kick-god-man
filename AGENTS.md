@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-A 3D stealth/action game ("是男人就踹他一百下") built with Vue 3 + Three.js + TypeScript. Player sneaks up on an office worker ("神人") and kicks them while avoiding detection.
+A 3D stealth/action game ("踹他一百下") built with Vue 3 + Three.js + TypeScript. Player sneaks up on an office worker ("神人") and kicks them while avoiding detection.
 
 ## Tech Stack
 

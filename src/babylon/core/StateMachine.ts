@@ -1,6 +1,6 @@
 export interface IState<T> {
   readonly name: string
-  enter(ctx: T): void
+  enter(ctx: T, ...args: any[]): void
   update(ctx: T, dt: number): IState<T> | null
   exit?(ctx: T): void
 }
@@ -22,6 +22,12 @@ export class StateMachine<T> {
     this.current?.exit?.(this.ctx)
     this.current = next
     this.current.enter(this.ctx)
+  }
+
+  forceState(next: IState<T>, ...args: any[]): void {
+    this.current?.exit?.(this.ctx)
+    this.current = next
+    this.current.enter(this.ctx, ...args)
   }
 
   update(dt: number): void {

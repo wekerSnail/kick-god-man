@@ -5,7 +5,7 @@
       <article class="card">
         <span class="emoji-badge">🦶</span>
         <h1 class="title">
-          是男人就<br />踹他一百下
+          <br />踹他一百下
         </h1>
         <p class="desc">
           办公室里的「神人」又在指点江山了，<br />

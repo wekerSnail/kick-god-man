@@ -2,9 +2,12 @@ import {
   Scene,
   TransformNode,
   Vector3,
+  Color3,
   AnimationGroup,
   PBRMaterial,
-  ShadowGenerator
+  ShadowGenerator,
+  MeshBuilder,
+  DynamicTexture
 } from '@babylonjs/core'
 import type { InputManager } from '../core/InputManager'
 import type { AssetManager } from '../core/AssetManager'
@@ -12,6 +15,7 @@ import type { WeaponConfig } from '../../types/game'
 import { createWeaponMesh } from '../weapons/WeaponModels'
 
 const characterModelUrl = `${import.meta.env.BASE_URL}models/characters/player.glb`
+const keyboardUrl = `${import.meta.env.BASE_URL}models/Keyboard.glb`
 
 export class Player {
   private mesh: TransformNode
@@ -19,6 +23,7 @@ export class Player {
   private position: Vector3
   private speed: number = 5
   private kickCooldown: number = 0
+  private kickCooldownMax: number = 5.0
   private isKicking: boolean = false
   private kickAnimationTime: number = 0
   private potCooldown: number = 0
@@ -37,12 +42,29 @@ export class Player {
   private isSwingingWeapon: boolean = false
   private swingTime: number = 0
   private swingCooldown: number = 0
+  private swingCooldownMax: number = 5.0
   private isChargingThrow: boolean = false
   private throwChargeTime: number = 0
   private throwChargeSpeed: number = 2.0
   private cooldownHintTimer: number = 0
   private animationGroups: AnimationGroup[] = []
   private currentAnimName: string = ''
+
+  private cooldownBarBg: TransformNode | null = null
+  private cooldownBarFill: DynamicTexture | null = null
+  private cooldownBarMeshes: TransformNode[] = []
+
+  private potCooldownBarBg: TransformNode | null = null
+  private potCooldownBarFill: DynamicTexture | null = null
+  private potCooldownBarMeshes: TransformNode[] = []
+  private potCooldownMax: number = 5.0
+
+  private throwChargeBarBg: TransformNode | null = null
+  private throwChargeBarFill: DynamicTexture | null = null
+  private throwChargeBarMeshes: TransformNode[] = []
+
+  private keyboardShield: TransformNode | null = null
+  private assetManager: AssetManager | null = null
 
   constructor(
     scene: Scene,
@@ -54,8 +76,221 @@ export class Player {
     this.input = input
     this.position = new Vector3(0, 0, 10)
     this.mesh = new TransformNode('player', this.scene)
+    this.assetManager = assetManager
 
     this.loadModel(assetManager)
+    this.createCooldownBar()
+    this.createPotCooldownBar()
+    this.createThrowChargeBar()
+    this.loadKeyboardShield()
+  }
+
+  private createPotCooldownBar(): void {
+    this.potCooldownBarBg = new TransformNode('potCooldownBarBg', this.scene)
+    this.potCooldownBarBg.parent = this.mesh
+    this.potCooldownBarBg.position.y = 2.4
+
+    const bg = MeshBuilder.CreatePlane('potCooldownBg', { width: 1.0, height: 0.12 }, this.scene)
+    bg.parent = this.potCooldownBarBg
+    bg.billboardMode = TransformNode.BILLBOARDMODE_ALL
+    bg.isVisible = false
+    this.potCooldownBarMeshes.push(bg)
+    const bgMat = new PBRMaterial('potCooldownBgMat', this.scene)
+    bgMat.albedoColor = new Color3(0.2, 0.2, 0.2)
+    bgMat.emissiveColor = new Color3(0.15, 0.15, 0.15)
+    bgMat.alpha = 0.8
+    bg.material = bgMat
+
+    const fill = MeshBuilder.CreatePlane('potCooldownFill', { width: 0.96, height: 0.08 }, this.scene)
+    fill.parent = this.potCooldownBarBg
+    fill.billboardMode = TransformNode.BILLBOARDMODE_ALL
+    fill.position.z = -0.01
+    fill.isVisible = false
+    this.potCooldownBarMeshes.push(fill)
+
+    this.potCooldownBarFill = new DynamicTexture('potCooldownFillTex', { width: 96, height: 8 }, this.scene, false)
+    const fillMat = new PBRMaterial('potCooldownFillMat', this.scene)
+    fillMat.albedoTexture = this.potCooldownBarFill
+    fillMat.emissiveTexture = this.potCooldownBarFill
+    fillMat.opacityTexture = this.potCooldownBarFill
+    fillMat.albedoColor = new Color3(0, 0, 0)
+    fillMat.emissiveColor = new Color3(0, 0, 0)
+    fill.material = fillMat
+
+    const ctx = this.potCooldownBarFill.getContext()
+    ctx.clearRect(0, 0, 96, 8)
+    this.potCooldownBarFill.update()
+  }
+
+  private createCooldownBar(): void {
+    this.cooldownBarBg = new TransformNode('cooldownBarBg', this.scene)
+    this.cooldownBarBg.parent = this.mesh
+    this.cooldownBarBg.position.y = 2.2
+
+    const bg = MeshBuilder.CreatePlane('cooldownBg', { width: 1.0, height: 0.12 }, this.scene)
+    bg.parent = this.cooldownBarBg
+    bg.billboardMode = TransformNode.BILLBOARDMODE_ALL
+    bg.isVisible = false
+    this.cooldownBarMeshes.push(bg)
+    const bgMat = new PBRMaterial('cooldownBgMat', this.scene)
+    bgMat.albedoColor = new Color3(0.2, 0.2, 0.2)
+    bgMat.emissiveColor = new Color3(0.15, 0.15, 0.15)
+    bgMat.alpha = 0.8
+    bg.material = bgMat
+
+    const fill = MeshBuilder.CreatePlane('cooldownFill', { width: 0.96, height: 0.08 }, this.scene)
+    fill.parent = this.cooldownBarBg
+    fill.billboardMode = TransformNode.BILLBOARDMODE_ALL
+    fill.position.z = -0.01
+    fill.isVisible = false
+    this.cooldownBarMeshes.push(fill)
+
+    this.cooldownBarFill = new DynamicTexture('cooldownFillTex', { width: 96, height: 8 }, this.scene, false)
+    const fillMat = new PBRMaterial('cooldownFillMat', this.scene)
+    fillMat.albedoTexture = this.cooldownBarFill
+    fillMat.emissiveTexture = this.cooldownBarFill
+    fillMat.opacityTexture = this.cooldownBarFill
+    fillMat.albedoColor = new Color3(0, 0, 0)
+    fillMat.emissiveColor = new Color3(0, 0, 0)
+    fill.material = fillMat
+
+    const ctx = this.cooldownBarFill.getContext()
+    ctx.clearRect(0, 0, 96, 8)
+    this.cooldownBarFill.update()
+  }
+
+  private updateCooldownBarVisual(progress: number): void {
+    if (!this.cooldownBarFill) return
+    const ctx = this.cooldownBarFill.getContext()
+    const w = 96
+    const h = 8
+    ctx.clearRect(0, 0, w, h)
+
+    if (progress <= 0) {
+      this.cooldownBarMeshes.forEach(m => m.isVisible = false)
+      return
+    }
+
+    this.cooldownBarMeshes.forEach(m => m.isVisible = true)
+    const fillW = Math.floor(w * progress)
+
+    ctx.fillStyle = '#22C55E'
+    ctx.fillRect(0, 0, fillW, h)
+
+    this.cooldownBarFill.update()
+  }
+
+  private updatePotCooldownBarVisual(progress: number): void {
+    if (!this.potCooldownBarFill) return
+    const ctx = this.potCooldownBarFill.getContext()
+    const w = 96
+    const h = 8
+    ctx.clearRect(0, 0, w, h)
+
+    if (progress <= 0) {
+      this.potCooldownBarMeshes.forEach(m => m.isVisible = false)
+      return
+    }
+
+    this.potCooldownBarMeshes.forEach(m => m.isVisible = true)
+    const fillW = Math.floor(w * progress)
+
+    ctx.fillStyle = '#3B82F6'
+    ctx.fillRect(0, 0, fillW, h)
+
+    this.potCooldownBarFill.update()
+  }
+
+  private createThrowChargeBar(): void {
+    this.throwChargeBarBg = new TransformNode('throwChargeBarBg', this.scene)
+    this.throwChargeBarBg.parent = this.mesh
+    this.throwChargeBarBg.position.y = 2.6
+
+    const bg = MeshBuilder.CreatePlane('throwChargeBg', { width: 1.0, height: 0.12 }, this.scene)
+    bg.parent = this.throwChargeBarBg
+    bg.billboardMode = TransformNode.BILLBOARDMODE_ALL
+    bg.isVisible = false
+    this.throwChargeBarMeshes.push(bg)
+    const bgMat = new PBRMaterial('throwChargeBgMat', this.scene)
+    bgMat.albedoColor = new Color3(0.2, 0.2, 0.2)
+    bgMat.emissiveColor = new Color3(0.15, 0.15, 0.15)
+    bgMat.alpha = 0.8
+    bg.material = bgMat
+
+    const fill = MeshBuilder.CreatePlane('throwChargeFill', { width: 0.96, height: 0.08 }, this.scene)
+    fill.parent = this.throwChargeBarBg
+    fill.billboardMode = TransformNode.BILLBOARDMODE_ALL
+    fill.position.z = -0.01
+    fill.isVisible = false
+    this.throwChargeBarMeshes.push(fill)
+
+    this.throwChargeBarFill = new DynamicTexture('throwChargeFillTex', { width: 96, height: 8 }, this.scene, false)
+    const fillMat = new PBRMaterial('throwChargeFillMat', this.scene)
+    fillMat.albedoTexture = this.throwChargeBarFill
+    fillMat.emissiveTexture = this.throwChargeBarFill
+    fillMat.opacityTexture = this.throwChargeBarFill
+    fillMat.albedoColor = new Color3(0, 0, 0)
+    fillMat.emissiveColor = new Color3(0, 0, 0)
+    fill.material = fillMat
+
+    const ctx = this.throwChargeBarFill.getContext()
+    ctx.clearRect(0, 0, 96, 8)
+    this.throwChargeBarFill.update()
+  }
+
+  private updateThrowChargeBarVisual(progress: number): void {
+    if (!this.throwChargeBarFill) return
+    const ctx = this.throwChargeBarFill.getContext()
+    const w = 96
+    const h = 8
+    ctx.clearRect(0, 0, w, h)
+
+    if (progress <= 0) {
+      this.throwChargeBarMeshes.forEach(m => m.isVisible = false)
+      return
+    }
+
+    this.throwChargeBarMeshes.forEach(m => m.isVisible = true)
+    const fillW = Math.floor(w * progress)
+
+    ctx.fillStyle = '#F97316'
+    ctx.fillRect(0, 0, fillW, h)
+
+    this.throwChargeBarFill.update()
+  }
+
+  private async loadKeyboardShield(): Promise<void> {
+    if (!this.assetManager) return
+
+    this.keyboardShield = new TransformNode('keyboardShield', this.scene)
+    this.keyboardShield.parent = this.mesh
+    this.keyboardShield.position = new Vector3(-0.4, 1.0, 0.3)
+    this.keyboardShield.rotation.x = -Math.PI / 6
+    this.keyboardShield.rotation.z = Math.PI / 8
+
+    const keyboard = await this.assetManager.loadProp('playerKeyboard', keyboardUrl)
+    keyboard.parent = this.keyboardShield
+    keyboard.scaling = new Vector3(0.5, 0.5, 0.5)
+  }
+
+  private updateKeyboardPosition(): void {
+    if (!this.keyboardShield) return
+
+    if (this.potActive) {
+      const targetY = 1.6
+      const targetZ = 0.8
+      this.keyboardShield.position.y += (targetY - this.keyboardShield.position.y) * 0.2
+      this.keyboardShield.position.z += (targetZ - this.keyboardShield.position.z) * 0.2
+      this.keyboardShield.rotation.x = -Math.PI / 2
+      this.keyboardShield.rotation.z = 0
+    } else {
+      const targetY = 1.0
+      const targetZ = 0.3
+      this.keyboardShield.position.y += (targetY - this.keyboardShield.position.y) * 0.2
+      this.keyboardShield.position.z += (targetZ - this.keyboardShield.position.z) * 0.2
+      this.keyboardShield.rotation.x = -Math.PI / 6
+      this.keyboardShield.rotation.z = Math.PI / 8
+    }
   }
 
   private async loadModel(assetManager: AssetManager): Promise<void> {
@@ -101,7 +336,7 @@ export class Player {
     }
     this.isKicking = true
     this.kickAnimationTime = 0.3
-    this.kickCooldown = 5.0
+    this.kickCooldown = this.kickCooldownMax
     this.playAnimation('Sprint', false)
   }
 
@@ -110,7 +345,7 @@ export class Player {
     this.equippedWeapon = weapon
     this.weaponMesh = createWeaponMesh(weapon.type, this.scene)
     this.weaponMesh.parent = this.mesh
-    this.weaponMesh.position = new Vector3(0.4, 1.3, 0)
+    this.weaponMesh.position = new Vector3(0.4, 1.0, 0.3)
   }
 
   unequipWeapon(): void {
@@ -130,7 +365,7 @@ export class Player {
     }
     this.isSwingingWeapon = true
     this.swingTime = this.equippedWeapon.swingDuration
-    this.swingCooldown = 5.0
+    this.swingCooldown = this.swingCooldownMax
   }
 
   private updateWeaponSwing(delta: number): void {
@@ -290,6 +525,18 @@ export class Player {
     if (this.potCooldown > 0) {
       this.potCooldown -= delta
     }
+
+    const maxCooldown = Math.max(this.kickCooldown, this.swingCooldown)
+    const progress = maxCooldown > 0 ? maxCooldown / this.kickCooldownMax : 0
+    this.updateCooldownBarVisual(progress)
+
+    const potProgress = this.potCooldown > 0 ? this.potCooldown / this.potCooldownMax : 0
+    this.updatePotCooldownBarVisual(potProgress)
+
+    const throwProgress = this.isChargingThrow ? (Math.sin(this.throwChargeTime * Math.PI * 2) + 1) / 2 : 0
+    this.updateThrowChargeBarVisual(throwProgress)
+
+    this.updateKeyboardPosition()
   }
 
   private updateWalkAnimation(_delta: number): void {
@@ -392,6 +639,18 @@ export class Player {
   }
 
   dispose(): void {
+    if (this.cooldownBarBg) {
+      this.cooldownBarBg.dispose()
+    }
+    if (this.potCooldownBarBg) {
+      this.potCooldownBarBg.dispose()
+    }
+    if (this.throwChargeBarBg) {
+      this.throwChargeBarBg.dispose()
+    }
+    if (this.keyboardShield) {
+      this.keyboardShield.dispose()
+    }
     this.mesh.dispose()
   }
 }
