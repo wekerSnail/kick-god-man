@@ -230,6 +230,7 @@ export class GameLoop {
             }
             this.player.unequipWeapon()
             this.levelManager.onKick(this.kickCount)
+            this.enemy.onAttacked(this.player.getPosition(), this.player.getPotActive())
           }
         } else if (this.player.getIsKicking() && !this.kickCounted) {
           if (distance < 2) {
@@ -240,6 +241,7 @@ export class GameLoop {
             if (this.levelManager.onKick(this.kickCount)) {
               this.createVictoryParticles()
             }
+            this.enemy.onAttacked(this.player.getPosition(), this.player.getPotActive())
           }
         }
       } else if (this.enemy.isInMeeting()) {

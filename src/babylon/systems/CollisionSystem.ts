@@ -38,11 +38,8 @@ export class CollisionSystem {
 
     if (distance > 5) return false
 
-    const forward = new Vector3(
-      Math.sin(this.enemy.getPosition().y),
-      0,
-      Math.cos(this.enemy.getPosition().y)
-    ).normalize()
+    const angle = this.enemy.getRotationY()
+    const forward = new Vector3(Math.sin(angle), 0, Math.cos(angle)).normalize()
 
     const toPlayer = playerPos.subtract(enemyPos).normalize()
     const dot = Vector3.Dot(forward, toPlayer)
