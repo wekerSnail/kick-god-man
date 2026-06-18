@@ -177,19 +177,19 @@ export interface HidingSpot {
 export const HIDING_SPOTS: HidingSpot[] = [
   {
     id: 'plant',
-    position: { x: -8, y: 0, z: -8 },
+    position: { x: -5, y: 0, z: -4 },
     size: { x: 2, y: 3, z: 2 },
     name: '盆栽'
   },
   {
     id: 'cabinet',
-    position: { x: 8, y: 0, z: -8 },
+    position: { x: 5, y: 0, z: -9 },
     size: { x: 3, y: 2, z: 1 },
-    name: '文件柜'
+    name: '书架'
   },
   {
     id: 'sofa',
-    position: { x: -8, y: 0, z: 8 },
+    position: { x: -4, y: 0, z: -2 },
     size: { x: 4, y: 1, z: 2 },
     name: '沙发'
   }

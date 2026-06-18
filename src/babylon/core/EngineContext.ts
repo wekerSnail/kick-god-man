@@ -52,7 +52,7 @@ export class EngineContext {
 
     this.camera = new FreeCamera('cam', new Vector3(0, 10, 15), this.scene)
     this.camera.setTarget(Vector3.Zero())
-    this.camera.fov = (70 * Math.PI) / 180
+    this.camera.fov = (50 * Math.PI) / 180
     this.camera.minZ = 0.1
     this.camera.maxZ = 1000
 

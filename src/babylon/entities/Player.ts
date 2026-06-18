@@ -74,7 +74,7 @@ export class Player {
   ) {
     this.scene = scene
     this.input = input
-    this.position = new Vector3(0, 0, 10)
+    this.position = new Vector3(0, 0, 5)
     this.mesh = new TransformNode('player', this.scene)
     this.assetManager = assetManager
 
@@ -479,8 +479,8 @@ export class Player {
     if (this.isMoving) {
       direction.normalize()
       this.position.addInPlace(direction.scaleInPlace(this.speed * delta))
-      this.position.x = Math.max(-14, Math.min(14, this.position.x))
-      this.position.z = Math.max(-14, Math.min(14, this.position.z))
+      this.position.x = Math.max(-9, Math.min(9, this.position.x))
+      this.position.z = Math.max(-9, Math.min(9, this.position.z))
       this.targetRotation = Math.atan2(direction.x, direction.z)
     }
 
@@ -634,11 +634,11 @@ export class Player {
   }
 
   getCameraPosition(): Vector3 {
-    return new Vector3(this.position.x, 8, this.position.z + 6)
+    return new Vector3(this.position.x + 8.4, 10, this.position.z + 8.4)
   }
 
   getCameraTarget(): Vector3 {
-    return new Vector3(this.position.x, 0, this.position.z - 2)
+    return new Vector3(this.position.x, 0, this.position.z)
   }
 
   dispose(): void {

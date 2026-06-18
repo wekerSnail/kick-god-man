@@ -138,8 +138,14 @@ export class GameLoop {
     this.player.update(delta)
 
     const playerPos = this.player.getPosition()
-    const cameraTarget = new Vector3(playerPos.x, 0, playerPos.z - 3)
-    const cameraOffset = new Vector3(playerPos.x, 14, playerPos.z + 5)
+    const dist = 12
+    const height = 10
+    const cameraOffset = new Vector3(
+      playerPos.x + dist * 0.7,
+      height,
+      playerPos.z + dist * 0.7
+    )
+    const cameraTarget = new Vector3(playerPos.x, 0, playerPos.z)
 
     this.camera.position = Vector3.Lerp(
       this.camera.position,

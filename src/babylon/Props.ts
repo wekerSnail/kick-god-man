@@ -61,9 +61,9 @@ export class Props {
     }
 
     const position = new Vector3(
-      (Math.random() - 0.5) * 20,
+      (Math.random() - 0.5) * 16,
       0.5,
-      (Math.random() - 0.5) * 20
+      (Math.random() - 0.5) * 16
     )
 
     const isWeapon = selectedConfig.category === 'weapon'

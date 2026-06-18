@@ -104,12 +104,12 @@ export class Enemy {
 
   private setupPatrolWaypoints(): void {
     this.patrolWaypoints = [
-      new Vector3(0, 0, -10),
-      new Vector3(-5, 0, -10),
-      new Vector3(-5, 0, -5),
-      new Vector3(5, 0, -5),
-      new Vector3(5, 0, -10),
-      new Vector3(0, 0, -10)
+      new Vector3(0, 0, -8),
+      new Vector3(-4, 0, -8),
+      new Vector3(-4, 0, -4),
+      new Vector3(4, 0, -4),
+      new Vector3(4, 0, -8),
+      new Vector3(0, 0, -8)
     ]
   }
 
