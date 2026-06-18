@@ -9,7 +9,11 @@ import {
 import type { AssetManager } from '../core/AssetManager'
 import type { EasterEggWeaponType } from '../../types/game'
 
-const PLAYER_MODEL_URL = `${import.meta.env.BASE_URL}models/characters/player.glb`
+// 使用 Vite 推荐的方式引入静态资源
+const PLAYER_MODEL_URL = new URL('/models/characters/player.glb', import.meta.url).href
+const WEAPON_GUN_URL = new URL('/models/kenney_blaster-kit_2.1/blaster-a.glb', import.meta.url).href
+const WEAPON_ROCKET_URL = new URL('/models/kenney_blaster-kit_2.1/scope-large-a.glb', import.meta.url).href
+const WEAPON_GRENADE_URL = new URL('/models/kenney_blaster-kit_2.1/grenade-a.glb', import.meta.url).href
 
 // Mixamo 右手骨骼候选名称
 const RIGHT_HAND_BONE_CANDIDATES = [
@@ -19,11 +23,11 @@ const RIGHT_HAND_BONE_CANDIDATES = [
   'RightHandIndex1'
 ]
 
-// 武器 GLB 路径映射
-const WEAPON_GLB_PATHS: Record<EasterEggWeaponType, string> = {
-  gun: 'kenney_blaster-kit_2.1/blaster-a.glb',
-  rocket: 'kenney_blaster-kit_2.1/scope-large-a.glb',
-  grenade: 'kenney_blaster-kit_2.1/grenade-a.glb'
+// 武器 URL 映射
+const WEAPON_URLS: Record<EasterEggWeaponType, string> = {
+  gun: WEAPON_GUN_URL,
+  rocket: WEAPON_ROCKET_URL,
+  grenade: WEAPON_GRENADE_URL
 }
 
 /**
@@ -88,7 +92,7 @@ export class RightHand {
 
     // 加载武器 GLB 模型
     try {
-      const glbPath = `${import.meta.env.BASE_URL}models/${WEAPON_GLB_PATHS[weaponType]}`
+      const glbPath = WEAPON_URLS[weaponType]
       console.log(`[RightHand] Loading weapon from: ${glbPath}`)
 
       // 使用 loadProp 加载简单模型（不需要骨骼动画）
