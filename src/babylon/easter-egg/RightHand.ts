@@ -1,7 +1,10 @@
 import {
   Scene,
   TransformNode,
-  Vector3
+  Vector3,
+  MeshBuilder,
+  StandardMaterial,
+  Color3
 } from '@babylonjs/core'
 import type { AssetManager } from '../core/AssetManager'
 import type { EasterEggWeaponType } from '../../types/game'
@@ -16,6 +19,13 @@ const RIGHT_HAND_BONE_CANDIDATES = [
   'RightHandIndex1'
 ]
 
+// 武器 GLB 路径映射
+const WEAPON_GLB_PATHS: Record<EasterEggWeaponType, string> = {
+  gun: 'kenney_blaster-kit_2.1/blaster-a.glb',
+  rocket: 'kenney_blaster-kit_2.1/scope-large-a.glb',
+  grenade: 'kenney_blaster-kit_2.1/grenade-a.glb'
+}
+
 /**
  * 彩蛋模式右手模型管理器
  * 加载 player.glb，隐藏身体，只显示右手区域的 mesh
@@ -26,6 +36,7 @@ export class RightHand {
   private _root: TransformNode | null = null
   private _rightHandBone: TransformNode | null = null
   private _weaponNode: TransformNode | null = null
+  private _weaponModel: TransformNode | null = null
   private _isActive = false
   private _idleTime = 0
 
@@ -60,16 +71,66 @@ export class RightHand {
       this._weaponNode.dispose()
       this._weaponNode = null
     }
+    if (this._weaponModel) {
+      this._weaponModel.dispose()
+      this._weaponModel = null
+    }
 
     if (!this._rightHandBone) return
 
-    // 创建武器占位节点（实际 GLB 加载在 EasterEggWeapons 中处理）
+    // 创建武器挂载节点
     this._weaponNode = new TransformNode(`weapon_${weaponType}`, this._scene)
     this._weaponNode.parent = this._rightHandBone
 
     // 武器位置偏移（相对于右手骨骼）
     this._weaponNode.position = new Vector3(0, 0.05, 0.1)
     this._weaponNode.rotation = new Vector3(0, 0, 0)
+
+    // 加载武器 GLB 模型
+    try {
+      const glbPath = `${import.meta.env.BASE_URL}models/${WEAPON_GLB_PATHS[weaponType]}`
+      const result = await this._assetManager.loadCharacter(`weapon_${weaponType}`, glbPath)
+      this._weaponModel = result.root
+      this._weaponModel.parent = this._weaponNode
+
+      // 调整武器大小和方向
+      this._weaponModel.scaling = new Vector3(0.5, 0.5, 0.5)
+      this._weaponModel.rotation = new Vector3(0, Math.PI, 0)
+    } catch (e) {
+      console.warn(`[RightHand] Failed to load weapon GLB for ${weaponType}, using placeholder`)
+      // 如果加载失败，创建占位几何体
+      this._createWeaponPlaceholder(weaponType)
+    }
+  }
+
+  /**
+   * 创建武器占位几何体（当 GLB 加载失败时）
+   */
+  private _createWeaponPlaceholder(type: EasterEggWeaponType): void {
+    if (!this._weaponNode) return
+
+    let mesh
+    const mat = new StandardMaterial(`weaponMat_${type}`, this._scene)
+
+    switch (type) {
+      case 'gun':
+        mesh = MeshBuilder.CreateBox('gunPlaceholder', { width: 0.1, height: 0.1, depth: 0.4 }, this._scene)
+        mat.emissiveColor = Color3.Yellow()
+        break
+      case 'rocket':
+        mesh = MeshBuilder.CreateCylinder('rocketPlaceholder', { height: 0.5, diameterTop: 0.05, diameterBottom: 0.15 }, this._scene)
+        mat.emissiveColor = Color3.Red()
+        break
+      case 'grenade':
+        mesh = MeshBuilder.CreateSphere('grenadePlaceholder', { diameter: 0.2 }, this._scene)
+        mat.emissiveColor = Color3.Green()
+        break
+    }
+
+    if (mesh) {
+      mesh.material = mat
+      mesh.parent = this._weaponNode
+    }
   }
 
   /**
@@ -201,6 +262,10 @@ export class RightHand {
     if (this._weaponNode) {
       this._weaponNode.dispose()
       this._weaponNode = null
+    }
+    if (this._weaponModel) {
+      this._weaponModel.dispose()
+      this._weaponModel = null
     }
     if (this._root) {
       this._root.dispose()

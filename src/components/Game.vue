@@ -169,7 +169,13 @@ const useProp = (index: number) => {
 const startEasterEgg = () => {
   gameLoop?.startEasterEgg(() => {
     // 彩蛋模式结束，恢复过渡画面状态
-    gameState.value.isLevelTransition = true
+    gameState.value = {
+      ...gameState.value,
+      isLevelTransition: true,
+      isEasterEgg: false,
+      easterEggTimeRemaining: 0,
+      easterEggWeaponType: null
+    }
   })
 }
 

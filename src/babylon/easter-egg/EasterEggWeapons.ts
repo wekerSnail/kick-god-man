@@ -236,7 +236,7 @@ export class EasterEggWeapons {
       proj.lifetime -= delta
 
       // 命中检测
-      const bossPos = this._boss['_enemy'].position // 访问 Enemy 的 position
+      const bossPos = this._boss.position
       const dist = Vector3.Distance(proj.node.position, bossPos)
 
       if (dist < HIT_RADIUS) {
@@ -261,7 +261,7 @@ export class EasterEggWeapons {
         proj.detonateTimer -= delta
         if (proj.detonateTimer <= 0) {
           // 检查爆炸范围
-          const bossDist = Vector3.Distance(proj.node.position, bossPos)
+          const bossDist = Vector3.Distance(proj.node.position, this._boss.position)
           if (bossDist < HIT_RADIUS * 2) {
             this._boss.onHitByExplosion()
           }
@@ -331,23 +331,23 @@ export class EasterEggWeapons {
       dir.z * GRENADE_SPEED
     )
 
-    // 模拟抛物线轨迹，每隔 0.1s 一个点
+    // 模拟抛物线轨迹，每隔 0.05s 一个点（更密集）
     const gravity = new Vector3(0, GRENADE_GRAVITY, 0)
     let pos = origin.clone()
     let vel = velocity.clone()
 
-    for (let t = 0; t < 1.5; t += 0.1) {
-      pos = pos.add(vel.scale(0.1))
-      vel = vel.add(gravity.scale(0.1))
+    for (let t = 0; t < 2.0; t += 0.05) {
+      pos = pos.add(vel.scale(0.05))
+      vel = vel.add(gravity.scale(0.05))
 
       if (pos.y < 0) break
 
-      const dot = MeshBuilder.CreateSphere(`aimDot_${t}`, { diameter: 0.06 }, this._scene)
+      const dot = MeshBuilder.CreateSphere(`aimDot_${t}`, { diameter: 0.12 }, this._scene)
       dot.position = pos.clone()
 
       const mat = new StandardMaterial(`aimDotMat_${t}`, this._scene)
-      mat.emissiveColor = Color3.Green()
-      mat.alpha = 0.5
+      mat.emissiveColor = Color3.Yellow()
+      mat.disableLighting = true
       dot.material = mat
 
       this._aimLineNodes.push(dot)

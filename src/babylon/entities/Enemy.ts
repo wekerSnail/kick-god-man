@@ -547,6 +547,20 @@ export class Enemy {
     this.mesh.rotation.y = angle
   }
 
+  /**
+   * 同步 position 到 mesh（用于外部直接修改 position 后调用）
+   */
+  syncPosition(): void {
+    this.mesh.position = this.position.clone()
+  }
+
+  /**
+   * 隐藏/显示敌人模型
+   */
+  setVisible(visible: boolean): void {
+    this.mesh.setEnabled(visible)
+  }
+
   getRotationY(): number {
     return this.mesh.rotation.y
   }

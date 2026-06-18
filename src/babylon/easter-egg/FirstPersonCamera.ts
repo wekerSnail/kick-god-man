@@ -2,7 +2,7 @@ import { Vector3, FreeCamera } from '@babylonjs/core'
 
 /**
  * 彩蛋模式 FPS 相机控制器
- * 进入时切换为第一人称视角，退出时恢复原等距视角
+ * 进入时切换为第一人称视角，鼠标控制朝向，退出时恢复原等距视角
  */
 export class FirstPersonCamera {
   private _camera: FreeCamera
@@ -10,9 +10,15 @@ export class FirstPersonCamera {
   private _savedTarget: Vector3 | null = null
   private _savedFov: number | null = null
   private _isActive = false
+  private _canvas: HTMLCanvasElement | null = null
+  private _mouseMoveHandler: ((e: MouseEvent) => void) | null = null
+  private _yaw = 0 // 水平旋转角
+  private _pitch = 0 // 垂直旋转角
+  private _sensitivity = 0.003 // 鼠标灵敏度
 
-  constructor(camera: FreeCamera) {
+  constructor(camera: FreeCamera, canvas?: HTMLCanvasElement) {
     this._camera = camera
+    this._canvas = canvas ?? null
   }
 
   /**
@@ -20,70 +26,95 @@ export class FirstPersonCamera {
    * @param playerPosition 玩家位置
    * @param bossPosition Boss 位置（初始朝向）
    */
-  enter(playerPosition: Vector3, _bossPosition: Vector3): void {
+  enter(playerPosition: Vector3, bossPosition: Vector3): void {
     // 保存当前相机状态
     this._savedPosition = this._camera.position.clone()
     this._savedTarget = this._camera.getTarget().clone()
     this._savedFov = this._camera.fov
 
     // 设置 FPS 视角
-    // 相机位置：玩家右手位置 + 头部偏移
+    // 相机位置：玩家位置 + 头部偏移
     this._camera.position = new Vector3(
-      playerPosition.x + 0.3,
+      playerPosition.x,
       playerPosition.y + 1.6,
       playerPosition.z
     )
 
-    // 初始看向 Boss 方向
+    // 计算初始朝向（看向 Boss）
     const lookDir = new Vector3(
-      _bossPosition.x - this._camera.position.x,
-      0,
-      _bossPosition.z - this._camera.position.z
-    ).normalize()
-    this._camera.setTarget(new Vector3(
-      this._camera.position.x + lookDir.x * 10,
-      this._camera.position.y,
-      this._camera.position.z + lookDir.z * 10
-    ))
-
-    // 调整 FOV 为 FPS 标准
-    this._camera.fov = 70 * (Math.PI / 180)
-
-    this._isActive = true
-  }
-
-  /**
-   * 更新相机朝向（跟随 Boss 方向 lerp）
-   * @param bossPosition Boss 当前位置
-   * @param delta 帧间隔
-   */
-  update(bossPosition: Vector3, delta: number): void {
-    if (!this._isActive) return
-
-    // 计算看向 Boss 的目标方向
-    const targetLook = new Vector3(
       bossPosition.x - this._camera.position.x,
       0,
       bossPosition.z - this._camera.position.z
     ).normalize()
 
-    // 当前朝向
-    const currentTarget = this._camera.getTarget()
-    const currentDir = new Vector3(
-      currentTarget.x - this._camera.position.x,
-      0,
-      currentTarget.z - this._camera.position.z
-    ).normalize()
+    // 初始化 yaw/pitch
+    this._yaw = Math.atan2(lookDir.x, lookDir.z)
+    this._pitch = 0
 
-    // Lerp 平滑过渡
-    const lerpFactor = 1 - Math.pow(0.01, delta)
-    const newDir = Vector3.Lerp(currentDir, targetLook, lerpFactor).normalize()
+    // 应用初始朝向
+    this._applyCameraRotation()
+
+    // 调整 FOV 为 FPS 标准
+    this._camera.fov = 70 * (Math.PI / 180)
+
+    // 锁定鼠标指针
+    if (this._canvas) {
+      this._canvas.requestPointerLock()
+      this._mouseMoveHandler = (e: MouseEvent) => this._onMouseMove(e)
+      document.addEventListener('mousemove', this._mouseMoveHandler)
+    }
+
+    this._isActive = true
+  }
+
+  /**
+   * 鼠标移动处理
+   */
+  private _onMouseMove(e: MouseEvent): void {
+    if (!this._isActive) return
+
+    this._yaw += e.movementX * this._sensitivity
+    this._pitch -= e.movementY * this._sensitivity
+
+    // 限制垂直视角
+    this._pitch = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, this._pitch))
+
+    this._applyCameraRotation()
+  }
+
+  /**
+   * 应用旋转到相机
+   */
+  private _applyCameraRotation(): void {
+    const dir = new Vector3(
+      Math.sin(this._yaw) * Math.cos(this._pitch),
+      Math.sin(this._pitch),
+      Math.cos(this._yaw) * Math.cos(this._pitch)
+    )
 
     this._camera.setTarget(new Vector3(
-      this._camera.position.x + newDir.x * 10,
-      this._camera.position.y,
-      this._camera.position.z + newDir.z * 10
+      this._camera.position.x + dir.x * 10,
+      this._camera.position.y + dir.y * 10,
+      this._camera.position.z + dir.z * 10
     ))
+  }
+
+  /**
+   * 获取当前朝向（用于射击方向）
+   */
+  getForwardDirection(): Vector3 {
+    return new Vector3(
+      Math.sin(this._yaw) * Math.cos(this._pitch),
+      Math.sin(this._pitch),
+      Math.cos(this._yaw) * Math.cos(this._pitch)
+    ).normalize()
+  }
+
+  /**
+   * 更新（保持相机位置固定，不需要每帧更新）
+   */
+  update(_bossPosition: Vector3, _delta: number): void {
+    // 鼠标控制模式下不需要自动更新
   }
 
   /**
@@ -91,6 +122,17 @@ export class FirstPersonCamera {
    */
   exit(): void {
     if (!this._isActive) return
+
+    // 退出鼠标锁定
+    if (document.pointerLockElement) {
+      document.exitPointerLock()
+    }
+
+    // 移除鼠标事件
+    if (this._mouseMoveHandler) {
+      document.removeEventListener('mousemove', this._mouseMoveHandler)
+      this._mouseMoveHandler = null
+    }
 
     if (this._savedPosition) {
       this._camera.position = this._savedPosition

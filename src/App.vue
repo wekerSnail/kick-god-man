@@ -15,6 +15,7 @@ import Game from './components/Game.vue'
   box-sizing: border-box;
 }
 
+html,
 body {
   background: #E8F0FE;
   margin: 0;

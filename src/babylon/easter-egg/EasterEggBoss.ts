@@ -103,6 +103,13 @@ export class EasterEggBoss {
   }
 
   /**
+   * 获取 Boss 位置（公共接口）
+   */
+  get position(): Vector3 {
+    return this._enemy.position
+  }
+
+  /**
    * 更新受击反应
    */
   private _updateHitReaction(delta: number): void {
@@ -111,6 +118,7 @@ export class EasterEggBoss {
       this._shakeTimer -= delta
       // 抖动：x 方向高频小幅偏移
       this._enemy.position.x += Math.sin(this._shakeTimer * 50) * 0.05
+      this._enemy.syncPosition()
       if (this._shakeTimer <= 0) {
         this._isShaking = false
       }
@@ -143,6 +151,9 @@ export class EasterEggBoss {
       this._enemy.position.x = -WALK_BOUND_X
       this._walkDirection = 1
     }
+
+    // 同步 position 到 mesh
+    this._enemy.syncPosition()
 
     // 面朝走动方向
     if (this._walkDirection > 0) {

@@ -38,6 +38,13 @@ The game uses **Babylon.js 9** (`@babylonjs/core` + `@babylonjs/loaders`). The `
 | `src/babylon/core/InputManager.ts` | Keyboard/mouse → abstract actions |
 | `src/babylon/systems/ProjectileSystem.ts` | Thrown weapon physics |
 | `src/babylon/weapons/WeaponModels.ts` | Procedural 3D weapon meshes |
+| `src/babylon/easter-egg/EasterEggMode.ts` | Easter egg mode controller (30s FPS shooting minigame) |
+| `src/babylon/easter-egg/EasterEggWeapons.ts` | Easter egg weapon system (gun/rocket/grenade) |
+| `src/babylon/easter-egg/EasterEggBoss.ts` | Boss behavior in easter egg mode |
+| `src/babylon/easter-egg/FirstPersonCamera.ts` | FPS camera for easter egg mode |
+| `src/babylon/easter-egg/RightHand.ts` | Right hand model with weapon attachment |
+| `src/babylon/easter-egg/EasterEggExplosion.ts` | Particle explosion effects |
+| `src/babylon/easter-egg/EasterEggHUD.ts` | Countdown HUD for easter egg mode |
 | `src/types/game.ts` | TypeScript interfaces, enums, weapon configs |
 | `src/components/Game.vue` | Main game UI — imports from babylon/GameLoop |
 | `src/components/hud/` | HUD components (TopBar, InventoryBar, StatusTicker, etc.) |
@@ -70,6 +77,15 @@ The game uses **Babylon.js 9** (`@babylonjs/core` + `@babylonjs/loaders`). The `
 - UI progress bars use `DynamicTexture` on `Plane` meshes with `billboardMode = BILLBOARDMODE_ALL`
 - Shadows: `ShadowGenerator` attached to a directional light
 - Camera: `FreeCamera` positioned at an isometric-like offset, lerped to follow player
+
+## Easter Egg Mode (彩蛋模式)
+
+30-second FPS shooting minigame triggered from transition screen:
+- **Trigger**: "奖励神人" button on level transition overlay
+- **Gameplay**: First-person view with right hand + weapon, shoot walking Boss
+- **Weapons**: Gun (auto-fire), Rocket (projectile + explosion), Grenade (arc throw + explosion)
+- **Boss reactions**: Shake on hit (gun), stun 3s (rocket/grenade), random taunts
+- **Implementation**: `src/babylon/easter-egg/` module, integrated via GameLoop
 
 ## Game Mechanics Reference
 

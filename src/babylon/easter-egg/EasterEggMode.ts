@@ -3,6 +3,7 @@ import type { Scene } from '@babylonjs/core'
 import type { FreeCamera } from '@babylonjs/core'
 import type { AssetManager } from '../core/AssetManager'
 import type { Enemy } from '../entities/Enemy'
+import type { Player } from '../entities/Player'
 import type { EasterEggWeaponType } from '../../types/game'
 import { EASTER_EGG_WEAPONS } from '../../types/game'
 import { FirstPersonCamera } from './FirstPersonCamera'
@@ -32,13 +33,17 @@ export class EasterEggMode {
   private _scene: Scene | null = null
   private _assetManager: AssetManager | null = null
   private _enemy: Enemy | null = null
+  private _player: Player | null = null
   private _mainCamera: FreeCamera | null = null
+  private _canvas: HTMLCanvasElement | null = null
 
-  init(scene: Scene, assetManager: AssetManager, enemy: Enemy, mainCamera: FreeCamera): void {
+  init(scene: Scene, assetManager: AssetManager, enemy: Enemy, player: Player, mainCamera: FreeCamera, canvas: HTMLCanvasElement): void {
     this._scene = scene
     this._assetManager = assetManager
     this._enemy = enemy
+    this._player = player
     this._mainCamera = mainCamera
+    this._canvas = canvas
   }
 
   get isActive(): boolean {
@@ -54,7 +59,7 @@ export class EasterEggMode {
   }
 
   async start(onComplete?: () => void): Promise<void> {
-    if (!this._scene || !this._assetManager || !this._enemy || !this._mainCamera) {
+    if (!this._scene || !this._assetManager || !this._enemy || !this._player || !this._mainCamera || !this._canvas) {
       throw new Error('EasterEggMode: init() must be called before start()')
     }
 
@@ -65,12 +70,15 @@ export class EasterEggMode {
     this._currentWeaponType = this._pickRandomWeapon()
     this._onComplete = onComplete ?? null
 
+    // 隐藏玩家实体
+    this._player.setVisible(false)
+
     // 初始化子系统
     this._explosion = new EasterEggExplosion(this._scene)
     this._boss = new EasterEggBoss(this._enemy)
     this._weapons = new EasterEggWeapons(this._scene, this._boss)
     this._weapons.setExplosion(this._explosion)
-    this._camera = new FirstPersonCamera(this._mainCamera)
+    this._camera = new FirstPersonCamera(this._mainCamera, this._canvas)
     this._rightHand = new RightHand(this._scene, this._assetManager)
     this._hud = new EasterEggHUD(this._scene)
 
@@ -83,8 +91,8 @@ export class EasterEggMode {
     await this._rightHand.switchWeapon(this._currentWeaponType)
     this._weapons.switchWeapon(this._currentWeaponType)
 
-    // FPS 相机
-    const playerPos = new Vector3(0, 0, 0) // 玩家固定在原点
+    // FPS 相机 - 玩家固定在房间中心靠后位置
+    const playerPos = new Vector3(0, 0, 3) // 房间中心靠后
     this._camera.enter(playerPos, this._enemy.position)
 
     // 倒计时 HUD
@@ -96,6 +104,9 @@ export class EasterEggMode {
 
     // 恢复相机
     this._camera?.exit()
+
+    // 恢复玩家显示
+    this._player?.setVisible(true)
 
     // 清理子系统
     this._rightHand?.deactivate()
@@ -131,13 +142,9 @@ export class EasterEggMode {
     this._rightHand.update(delta)
     this._hud.update(this._timeRemaining)
 
-    // 相机跟随 Boss
-    this._camera.update(this._enemy!.position, delta)
-
     // 更新武器系统（射击逻辑）
-    const fireOrigin = new Vector3(0.3, 1.6, 0) // 右手位置
-    const cameraTarget = this._mainCamera!.getTarget()
-    const fireDirection = cameraTarget.subtract(this._mainCamera!.position).normalize()
+    const fireOrigin = this._mainCamera!.position.clone()
+    const fireDirection = this._camera.getForwardDirection()
     this._weapons.update(delta, fireOrigin, fireDirection)
   }
 

@@ -539,7 +539,7 @@ export class GameLoop {
   async startEasterEgg(onComplete?: () => void): Promise<void> {
     this.isEasterEgg = true
     this.easterEggMode = new EasterEggMode()
-    this.easterEggMode.init(this.scene, this.assetManager, this.enemy, this.camera)
+    this.easterEggMode.init(this.scene, this.assetManager, this.enemy, this.player, this.camera, this.canvas!)
     await this.easterEggMode.start(() => {
       this.stopEasterEgg()
       onComplete?.()

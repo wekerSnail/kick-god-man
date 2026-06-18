@@ -583,6 +583,13 @@ export class Player {
     return this.position
   }
 
+  /**
+   * 隐藏/显示玩家模型
+   */
+  setVisible(visible: boolean): void {
+    this.mesh.setEnabled(visible)
+  }
+
   getIsKicking(): boolean {
     return this.isKicking
   }
