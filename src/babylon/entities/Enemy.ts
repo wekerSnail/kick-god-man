@@ -163,37 +163,37 @@ export class Enemy {
 
   showDialogue(text: string, duration: number = 3): void {
     if (!this.dialogueSpriteManager) {
-      this.dialogueDynamicTexture = new DynamicTexture('dialogueTex', { width: 512, height: 128 }, this.scene, false)
-      this.dialogueSpriteManager = new SpriteManager('dialogueMgr', '', 1, { width: 512, height: 128 }, this.scene)
+      this.dialogueDynamicTexture = new DynamicTexture('dialogueTex', { width: 512, height: 192 }, this.scene, false)
+      this.dialogueSpriteManager = new SpriteManager('dialogueMgr', '', 1, { width: 512, height: 192 }, this.scene)
       this.dialogueSpriteManager.texture = this.dialogueDynamicTexture
     }
 
     if (!this.dialogueSprite) {
       this.dialogueSprite = new Sprite('dialogue', this.dialogueSpriteManager)
-      this.dialogueSprite.width = 4
-      this.dialogueSprite.height = 1
+      this.dialogueSprite.width = 5
+      this.dialogueSprite.height = 1.5
       this.dialogueSprite.invertV = true
     }
 
     const ctx = this.dialogueDynamicTexture!.getContext() as any
     ctx.fillStyle = '#FFFFFF'
-    ctx.fillRect(0, 0, 512, 128)
+    ctx.fillRect(0, 0, 512, 192)
 
     ctx.fillStyle = '#333333'
-    ctx.font = 'bold 32px Arial'
+    ctx.font = 'bold 48px Arial'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
 
-    const lines = this.wrapText(text, 12)
-    const lineHeight = 40
-    const startY = 64 - (lines.length - 1) * lineHeight / 2
+    const lines = this.wrapText(text, 10)
+    const lineHeight = 60
+    const startY = 96 - (lines.length - 1) * lineHeight / 2
     lines.forEach((line, i) => {
       ctx.fillText(line, 256, startY + i * lineHeight)
     })
 
     this.dialogueDynamicTexture!.update()
 
-    this.dialogueSprite.position = new Vector3(this.position.x, this.position.y + 3.4, this.position.z)
+    this.dialogueSprite.position = new Vector3(this.position.x, this.position.y + 3.8, this.position.z)
     this.dialogueSprite.isVisible = true
 
     setTimeout(() => {
