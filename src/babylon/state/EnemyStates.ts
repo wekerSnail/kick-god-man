@@ -266,22 +266,46 @@ export class MeetingState implements IState<Enemy> {
   readonly name = "meeting";
   private timer: number = 0;
   private duration: number = 0;
-  private dialogueShown: boolean = false;
+  private dialogueTimer: number = 0;
+  private dialogueInterval: number = 0;
+
+  private static DIALOGUES = [
+    '这个需求很简单，明天上线',
+    '对齐一下颗粒度',
+    '我们拉通一下',
+    '赋能！懂吗？',
+    '这个方案要闭环',
+    '你先出个方案',
+    '对齐一下认知',
+    '这个优先级P0！',
+    '降本增效！',
+    '复盘一下上周',
+    '抓手是什么？',
+    '要形成组合拳',
+    '今天必须搞定',
+    '老板觉得不行',
+    '这个逻辑不work',
+  ]
 
   enter(ctx: Enemy): void {
     this.timer = 0;
     this.duration = 12 + Math.random() * 8;
-    this.dialogueShown = false;
+    this.dialogueTimer = 0;
+    this.dialogueInterval = 0;
     ctx.showMeetingIndicator(true);
+    ctx.playAnimation('Idle');
+    this.showRandomDialogue(ctx);
   }
 
   update(ctx: Enemy, dt: number): IState<Enemy> | null {
     this.timer += dt;
-    ctx.updateMeetingAnimation(dt);
+    ctx.updateMeetingSway(dt);
 
-    if (!this.dialogueShown && this.timer >= 0.5) {
-      ctx.showDialogue('开会中，别打扰！', 3);
-      this.dialogueShown = true;
+    this.dialogueTimer += dt;
+    if (this.dialogueTimer >= this.dialogueInterval) {
+      this.dialogueTimer = 0;
+      this.dialogueInterval = 3 + Math.random() * 2;
+      this.showRandomDialogue(ctx);
     }
 
     if (this.timer >= this.duration) {
@@ -290,8 +314,14 @@ export class MeetingState implements IState<Enemy> {
     return null;
   }
 
+  private showRandomDialogue(ctx: Enemy): void {
+    const idx = Math.floor(Math.random() * MeetingState.DIALOGUES.length);
+    ctx.showDialogue(MeetingState.DIALOGUES[idx], 4);
+  }
+
   exit(ctx: Enemy): void {
     ctx.showMeetingIndicator(false);
+    ctx.resetMeetingSway();
   }
 }
 

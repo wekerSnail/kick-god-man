@@ -49,6 +49,7 @@ export class Enemy {
   private _playerUsingKeyboardDuringAttack: boolean = false
   private _playerDetectedInLookBack: boolean = false
   private _lookBackGameOverPending: boolean = false
+  private meetingSwayTime: number = 0
 
   constructor(
     scene: Scene,
@@ -289,10 +290,19 @@ export class Enemy {
     }
   }
 
-  updateMeetingAnimation(dt: number): void {
+  updateMeetingSway(dt: number): void {
+    this.meetingSwayTime += dt
+    this.mesh.rotation.x = Math.sin(this.meetingSwayTime * 3) * 0.03
+    this.mesh.rotation.z = Math.cos(this.meetingSwayTime * 2.5) * 0.02
     if (this.meetingIndicator) {
       this.meetingIndicator.rotation.y += dt * 2
     }
+  }
+
+  resetMeetingSway(): void {
+    this.meetingSwayTime = 0
+    this.mesh.rotation.x = 0
+    this.mesh.rotation.z = 0
   }
 
   showPatrolWarning(show: boolean): void {
