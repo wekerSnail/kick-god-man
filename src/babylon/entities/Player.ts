@@ -635,7 +635,7 @@ export class Player {
   }
 
   getCameraTarget(): Vector3 {
-    return new Vector3(this.position.x, 0, this.position.z - 5)
+    return new Vector3(this.position.x, 0, this.position.z - 2)
   }
 
   dispose(): void {
