@@ -27,10 +27,10 @@ const ROCKET_SPEED = 30
 const ROCKET_LIFETIME = 3
 
 // 手榴弹配置
-const GRENADE_SPEED = 15
+const GRENADE_SPEED = 10
 const GRENADE_GRAVITY = -9.8
-const GRENADE_DETONATE_DELAY = 1 // 落地后延迟爆炸
-const GRENADE_LIFETIME = 5
+const GRENADE_DETONATE_DELAY = 0.5 // 落地后延迟爆炸
+const GRENADE_LIFETIME = 3
 
 interface Projectile {
   node: TransformNode
@@ -220,18 +220,18 @@ export class EasterEggWeapons {
    * 手榴弹射击：抛物线投掷
    */
   private _fireGrenade(origin: Vector3, direction: Vector3): void {
-    const grenade = MeshBuilder.CreateSphere('grenade', { diameter: 0.2 }, this._scene)
+    const grenade = MeshBuilder.CreateSphere('grenade', { diameter: 0.12 }, this._scene)
     grenade.position = origin.clone()
 
     const mat = new StandardMaterial('grenadeMat', this._scene)
     mat.emissiveColor = Color3.Green()
     grenade.material = mat
 
-    // 初始速度：向前 + 向上抛物线
+    // 初始速度：向前 + 向上抛物线（较小弧度）
     const dir = direction.normalize()
     const velocity = new Vector3(
       dir.x * GRENADE_SPEED,
-      GRENADE_SPEED * 0.7, // 向上分量
+      GRENADE_SPEED * 0.5, // 向上分量（减小弧度）
       dir.z * GRENADE_SPEED
     )
 
@@ -323,12 +323,13 @@ export class EasterEggWeapons {
   }
 
   /**
-   * 创建弹道轨迹粒子
+   * 创建弹道轨迹粒子（跟随子弹移动）
    */
   private _createBulletTrail(bullet: TransformNode): void {
     const ps = new ParticleSystem('bulletTrail', 30, this._scene)
-    ps.emitter = bullet.position.clone()
-    ps.createSphereEmitter(0.03)
+    // 使用子弹本身作为发射器，粒子会跟随子弹移动
+    ps.emitter = bullet.position
+    ps.createSphereEmitter(0.05)
 
     ps.color1 = new Color4(1, 1, 0.5, 1)
     ps.color2 = new Color4(1, 0.8, 0, 0.6)
@@ -337,9 +338,9 @@ export class EasterEggWeapons {
     ps.minSize = 0.03
     ps.maxSize = 0.08
     ps.minLifeTime = 0.05
-    ps.maxLifeTime = 0.2
+    ps.maxLifeTime = 0.15
 
-    ps.emitRate = 150
+    ps.emitRate = 100
     ps.gravity = Vector3.Zero()
 
     ps.targetStopDuration = BULLET_LIFETIME
@@ -348,12 +349,13 @@ export class EasterEggWeapons {
   }
 
   /**
-   * 创建导弹尾焰粒子
+   * 创建导弹尾焰粒子（跟随导弹移动）
    */
   private _createRocketTrail(rocket: TransformNode): void {
     // 烟雾尾迹
     const smoke = new ParticleSystem('rocketSmoke', 50, this._scene)
-    smoke.emitter = rocket.position.clone()
+    // 使用导弹本身作为发射器，粒子会跟随导弹移动
+    smoke.emitter = rocket.position
     smoke.createSphereEmitter(0.08)
 
     smoke.color1 = new Color4(0.8, 0.8, 0.8, 0.6)
@@ -376,7 +378,8 @@ export class EasterEggWeapons {
 
     // 火焰尾焰
     const fire = new ParticleSystem('rocketFire', 30, this._scene)
-    fire.emitter = rocket.position.clone()
+    // 使用导弹本身作为发射器，粒子会跟随导弹移动
+    fire.emitter = rocket.position
     fire.createSphereEmitter(0.05)
 
     fire.color1 = new Color4(1, 0.8, 0, 1)
@@ -445,7 +448,7 @@ export class EasterEggWeapons {
     const dir = direction.normalize()
     const velocity = new Vector3(
       dir.x * GRENADE_SPEED,
-      GRENADE_SPEED * 0.7,
+      GRENADE_SPEED * 0.5, // 与实际投掷速度匹配
       dir.z * GRENADE_SPEED
     )
 

@@ -156,7 +156,9 @@ export class EasterEggMode {
     this._hud.update(this._timeRemaining)
 
     // 更新武器系统（射击逻辑）
-    const fireOrigin = this._mainCamera!.position.clone()
+    // 使用武器位置作为射击起点（相机位置 + 武器偏移）
+    const weaponOffset = new Vector3(0.3, -0.25, 0.5)
+    const fireOrigin = this._mainCamera!.position.add(weaponOffset)
     const fireDirection = this._camera.getForwardDirection()
     this._weapons.update(delta, fireOrigin, fireDirection)
   }

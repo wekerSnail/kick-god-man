@@ -568,6 +568,10 @@ export class GameLoop {
 
     // 重置敌人检测状态，避免彩蛋模式结束后立即触发游戏结束
     this.enemy.setLookBackDetected(false)
+
+    // 恢复敌人到正常状态（传送回原位）
+    this.enemy.position = new Vector3(0, 0, 0)
+    this.enemy.syncPosition()
   }
 
   private createVictoryParticles(): void {
