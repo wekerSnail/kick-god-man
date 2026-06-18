@@ -357,7 +357,12 @@ export class Enemy {
     }
   }
 
+  regeneratePatrolWaypoints(): void {
+    this.setupPatrolWaypoints()
+  }
+
   startPatrolWalk(): void {
+    this.regeneratePatrolWaypoints()
     this.currentWaypointIndex = 1
   }
 
