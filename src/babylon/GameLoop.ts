@@ -228,7 +228,6 @@ export class GameLoop {
             if (weapon.stunDuration > 0) {
               // Enemy stun not implemented in simplified version
             }
-            this.player.unequipWeapon()
             this.levelManager.onKick(this.kickCount)
             this.enemy.onAttacked(this.player.getPosition(), this.player.getPotActive())
           }
@@ -261,7 +260,6 @@ export class GameLoop {
             if (weapon.stunDuration > 0) {
               // Enemy stun not implemented in simplified version
             }
-            this.player.unequipWeapon()
             this.levelManager.onKick(this.kickCount)
             this.enemy.onAttacked(this.player.getPosition(), this.player.getPotActive())
           }
