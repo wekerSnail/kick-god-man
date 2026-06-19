@@ -69,6 +69,10 @@ export class HidingSpots {
     const childMeshes = prop.getChildMeshes()
     if (childMeshes.length === 0) return false
 
+    // 先设置 parent，确保坐标系一致
+    prop.parent = parent
+
+    // 在新坐标系中计算 bounding box
     let minY = Infinity
     let maxY = -Infinity
     let minX = Infinity
@@ -89,7 +93,6 @@ export class HidingSpots {
     const scale = targetHeight / height
     const centerX = (minX + maxX) / 2
     const centerZ = (minZ + maxZ) / 2
-    prop.parent = parent
     prop.scaling = new Vector3(scale, scale, scale)
     prop.position = new Vector3(-centerX * scale, -minY * scale, -centerZ * scale)
     childMeshes.forEach(m => {
@@ -97,6 +100,7 @@ export class HidingSpots {
       if (targetHeight >= 0.4) {
         this.shadowGen.addShadowCaster(m)
       }
+      m.computeWorldMatrix(true)
       m.freezeWorldMatrix()
       if (m.material) (m.material as PBRMaterial).freeze()
     })

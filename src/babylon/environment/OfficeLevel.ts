@@ -125,11 +125,16 @@ export class OfficeLevel {
     position: Vector3,
     rotationY: number,
     targetHeight: number,
-    addCollider: boolean = false
+    addCollider: boolean = false,
+    yOffset: number = 0
   ): boolean {
     const childMeshes = prop.getChildMeshes()
     if (childMeshes.length === 0) return false
 
+    // 先设置 parent，确保坐标系一致
+    prop.parent = parent
+
+    // 在新坐标系中计算 bounding box
     let minY = Infinity
     let maxY = -Infinity
     let minX = Infinity
@@ -151,9 +156,8 @@ export class OfficeLevel {
     const centerX = (minX + maxX) / 2
     const centerZ = (minZ + maxZ) / 2
 
-    prop.parent = parent
     prop.scaling = new Vector3(scale, scale, scale)
-    prop.position = new Vector3(position.x - centerX * scale, -minY * scale, position.z - centerZ * scale)
+    prop.position = new Vector3(position.x - centerX * scale, -minY * scale + yOffset, position.z - centerZ * scale)
     prop.rotation.y = rotationY
 
     if (addCollider) {
@@ -166,6 +170,7 @@ export class OfficeLevel {
       if (targetHeight >= 0.4) {
         this.shadowGen.addShadowCaster(m)
       }
+      m.computeWorldMatrix(true)
       m.freezeWorldMatrix()
       if (m.material) (m.material as PBRMaterial).freeze()
     })
@@ -222,28 +227,23 @@ export class OfficeLevel {
     this.addColliderBox(-2, -5, 0.3, 0.3)
 
     const screen = await this.assetManager.loadProp('computerScreen', computerUrl)
-    const screenPlaced = this.placeProp(screen, deskParent, new Vector3(0, 0, -7.5), Math.PI, 0.5)
+    const screenPlaced = this.placeProp(screen, deskParent, new Vector3(0, 0, -7.5), Math.PI, 0.5, false, 1.2)
     if (screenPlaced) {
-      screen.position.y += 1.25
       screen.position.x = 0
     } else {
       this.fallbackScreen(deskParent, new Vector3(0, 0, -7.5))
     }
 
     const keyboard = await this.assetManager.loadProp('computerKeyboard', keyboardUrl)
-    const keyboardPlaced = this.placeProp(keyboard, deskParent, new Vector3(0, 0, -6.8), Math.PI, 0.027)
+    const keyboardPlaced = this.placeProp(keyboard, deskParent, new Vector3(0, 0, -6.8), Math.PI, 0.027, false, 1.2)
     if (keyboardPlaced) {
-      keyboard.position.y += 1.25
       keyboard.position.x = 0
     } else {
       this.fallbackKeyboard(deskParent, new Vector3(0, 0, -6.8))
     }
 
     const deskPlant = await this.assetManager.loadProp('plantSmall1', plantSmall1Url)
-    const deskPlantPlaced = this.placeProp(deskPlant, deskParent, new Vector3(0.8, 0, -7.3), 0, 0.35)
-    if (deskPlantPlaced) {
-      deskPlant.position.y += 1.25
-    }
+    this.placeProp(deskPlant, deskParent, new Vector3(0.8, 0, -7.3), 0, 0.35, false, 1.2)
 
     const lamp = await this.assetManager.loadProp('lampSquareCeiling', lampSquareCeilingUrl)
     const lampPlaced = this.placeProp(lamp, deskParent, new Vector3(0, 0, -7), Math.PI, 0.5)
