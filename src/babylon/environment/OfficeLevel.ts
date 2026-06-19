@@ -148,7 +148,10 @@ export class OfficeLevel {
 
     childMeshes.forEach(m => {
       m.receiveShadows = true
-      this.shadowGen.addShadowCaster(m)
+      // 仅较大物体投射阴影，小装饰跳过（P3.2 优化）
+      if (targetHeight >= 0.4) {
+        this.shadowGen.addShadowCaster(m)
+      }
     })
     return true
   }
@@ -395,6 +398,18 @@ export class OfficeLevel {
     shelfMat.albedoColor = Color3.FromHexString('#C4A06A')
     shelfMat.roughness = 0.7
 
+    // 书色材质提到循环外复用，每种颜色只创建一次（P3.3）
+    const bookColors = ['#E74C3C', '#3498DB', '#2ECC71', '#9B59B6', '#F39C12']
+    const bookMats = bookColors.map((c, i) => {
+      const m = new PBRMaterial(`bookMat_${i}`, this.scene)
+      m.albedoColor = Color3.FromHexString(c)
+      return m
+    })
+
+    // 搁板支架材质只创建一次（P3.3）
+    const bracketMat = new PBRMaterial('bracketMat', this.scene)
+    bracketMat.albedoColor = Color3.FromHexString('#333333')
+
     // 两层搁板
     for (let row = 0; row < 2; row++) {
       const shelf = MeshBuilder.CreateBox(`shelf_${row}`, {
@@ -404,25 +419,15 @@ export class OfficeLevel {
       shelf.parent = shelfParent
       shelf.material = shelfMat
 
-      // 搁板上的书
-      const bookColors = ['#E74C3C', '#3498DB', '#2ECC71', '#9B59B6', '#F39C12']
       for (let b = 0; b < 4; b++) {
-        const bookMat = new PBRMaterial(`bookMat_${row}_${b}`, this.scene)
-        bookMat.albedoColor = Color3.FromHexString(bookColors[b % bookColors.length])
         const book = MeshBuilder.CreateBox(`book_${row}_${b}`, {
           width: 0.15, height: 0.3 + Math.random() * 0.15, depth: 0.2
         }, this.scene)
         book.position = new Vector3(-7.5 + b * 0.35, 2.68 + row * 1.2 + 0.15, -9.75)
         book.parent = shelfParent
-        book.material = bookMat
+        book.material = bookMats[b % bookMats.length]
       }
-    }
 
-    // 搁板支架
-    const bracketMat = new PBRMaterial('bracketMat', this.scene)
-    bracketMat.albedoColor = Color3.FromHexString('#333333')
-
-    for (let row = 0; row < 2; row++) {
       for (let side = 0; side < 2; side++) {
         const bracket = MeshBuilder.CreateBox(`bracket_${row}_${side}`, {
           width: 0.04, height: 0.3, depth: 0.04

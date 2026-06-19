@@ -16,7 +16,7 @@ export class InputManager {
   private actionJustPressed = new Map<Action, boolean>()
   private eventHandlers: Array<[string, EventListener, EventTarget]> = []
 
-  constructor(canvas?: HTMLCanvasElement) {
+  constructor() {
     this.bind('KeyW', 'moveForward')
     this.bind('KeyS', 'moveBackward')
     this.bind('KeyA', 'moveLeft')
@@ -26,7 +26,7 @@ export class InputManager {
     this.bind('Digit2', 'useProp2')
     this.bind('Digit3', 'useProp3')
 
-    this.setupListeners(canvas)
+    this.setupListeners()
   }
 
   bind(keyCode: string, action: Action): void {
@@ -38,7 +38,7 @@ export class InputManager {
     this.eventHandlers.push([type, handler, target])
   }
 
-  private setupListeners(canvas?: HTMLCanvasElement): void {
+  private setupListeners(): void {
     // --- 键盘 ---
     const onDown = (e: KeyboardEvent) => {
       const action = this.bindings.get(e.code)
@@ -78,18 +78,10 @@ export class InputManager {
       e.preventDefault()
     }
 
-    // 在 canvas 上用捕获阶段监听，防止被 Babylon.js 拦截
-    const mouseTarget = canvas || document
-    this.addHandler(mouseTarget, 'pointerdown', onPointerDown as EventListener, { capture: true })
-    this.addHandler(mouseTarget, 'pointerup', onPointerUp as EventListener, { capture: true })
-    this.addHandler(mouseTarget, 'contextmenu', onContextMenu as EventListener, { capture: true })
-
-    // document 上也监听一份，确保不遗漏
-    if (canvas) {
-      this.addHandler(document, 'pointerdown', onPointerDown as EventListener, { capture: true })
-      this.addHandler(document, 'pointerup', onPointerUp as EventListener, { capture: true })
-      this.addHandler(document, 'contextmenu', onContextMenu as EventListener, { capture: true })
-    }
+    // 仅在 document 上监听，避免重复处理同一事件（P4.1 修复）
+    this.addHandler(document, 'pointerdown', onPointerDown as EventListener, { capture: true })
+    this.addHandler(document, 'pointerup', onPointerUp as EventListener, { capture: true })
+    this.addHandler(document, 'contextmenu', onContextMenu as EventListener, { capture: true })
   }
 
   isActionActive(action: Action): boolean {

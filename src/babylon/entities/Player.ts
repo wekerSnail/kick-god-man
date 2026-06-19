@@ -65,6 +65,12 @@ export class Player {
 
   private keyboardShield: TransformNode | null = null
   private assetManager: AssetManager | null = null
+  // 复用方向向量，避免每帧 new（P0.3）
+  private _moveDir = Vector3.Zero()
+  // 进度条纹理缓存值，量化到 1%，避免每帧 GPU 上传（P2.1）
+  private _lastCooldownPct: number = -1
+  private _lastPotPct: number = -1
+  private _lastThrowPct: number = -1
 
   constructor(
     scene: Scene,
@@ -161,6 +167,12 @@ export class Player {
 
   private updateCooldownBarVisual(progress: number): void {
     if (!this.cooldownBarFill) return
+
+    // 量化到 1%，跳过无变化的帧
+    const pct = Math.floor(progress * 100)
+    if (pct === this._lastCooldownPct) return
+    this._lastCooldownPct = pct
+
     const ctx = this.cooldownBarFill.getContext()
     const w = 96
     const h = 8
@@ -168,6 +180,7 @@ export class Player {
 
     if (progress <= 0) {
       this.cooldownBarMeshes.forEach(m => m.isVisible = false)
+      this._lastCooldownPct = 0
       return
     }
 
@@ -182,6 +195,11 @@ export class Player {
 
   private updatePotCooldownBarVisual(progress: number): void {
     if (!this.potCooldownBarFill) return
+
+    const pct = Math.floor(progress * 100)
+    if (pct === this._lastPotPct) return
+    this._lastPotPct = pct
+
     const ctx = this.potCooldownBarFill.getContext()
     const w = 96
     const h = 8
@@ -189,6 +207,7 @@ export class Player {
 
     if (progress <= 0) {
       this.potCooldownBarMeshes.forEach(m => m.isVisible = false)
+      this._lastPotPct = 0
       return
     }
 
@@ -240,6 +259,11 @@ export class Player {
 
   private updateThrowChargeBarVisual(progress: number): void {
     if (!this.throwChargeBarFill) return
+
+    const pct = Math.floor(progress * 100)
+    if (pct === this._lastThrowPct) return
+    this._lastThrowPct = pct
+
     const ctx = this.throwChargeBarFill.getContext()
     const w = 96
     const h = 8
@@ -247,6 +271,7 @@ export class Player {
 
     if (progress <= 0) {
       this.throwChargeBarMeshes.forEach(m => m.isVisible = false)
+      this._lastThrowPct = 0
       return
     }
 
@@ -321,7 +346,7 @@ export class Player {
       root.scaling = new Vector3(scale, scale, scale)
     }
 
-    this.mesh.position = this.position.clone()
+    this.mesh.position.copyFrom(this.position)
   }
 
   kick(): void {
@@ -385,10 +410,6 @@ export class Player {
     }
   }
 
-  hasEquippedWeapon(): boolean {
-    return this.equippedWeapon !== null
-  }
-
   getEquippedWeapon(): WeaponConfig | null {
     return this.equippedWeapon
   }
@@ -415,11 +436,6 @@ export class Player {
     this.isChargingThrow = false
     this.throwChargeTime = 0
     return power
-  }
-
-  cancelThrow(): void {
-    this.isChargingThrow = false
-    this.throwChargeTime = 0
   }
 
   isCharging(): boolean {
@@ -467,24 +483,27 @@ export class Player {
   }
 
   update(delta: number): void {
-    const direction = Vector3.Zero()
+    this._moveDir.set(0, 0, 0)
 
-    if (this.input.isActionActive('moveForward')) direction.z -= 1
-    if (this.input.isActionActive('moveBackward')) direction.z += 1
-    if (this.input.isActionActive('moveLeft')) direction.x += 1
-    if (this.input.isActionActive('moveRight')) direction.x -= 1
+    if (this.input.isActionActive('moveForward')) this._moveDir.z -= 1
+    if (this.input.isActionActive('moveBackward')) this._moveDir.z += 1
+    if (this.input.isActionActive('moveLeft')) this._moveDir.x += 1
+    if (this.input.isActionActive('moveRight')) this._moveDir.x -= 1
 
-    this.isMoving = direction.length() > 0
+    this.isMoving = this._moveDir.length() > 0
 
     if (this.isMoving) {
-      direction.normalize()
-      this.position.addInPlace(direction.scaleInPlace(this.speed * delta))
+      this._moveDir.normalize()
+      // 复用 _moveDir 避免 scaleInPlace 创建新对象
+      this.position.x += this._moveDir.x * this.speed * delta
+      this.position.y += this._moveDir.y * this.speed * delta
+      this.position.z += this._moveDir.z * this.speed * delta
       this.position.x = Math.max(-9, Math.min(9, this.position.x))
       this.position.z = Math.max(-9, Math.min(9, this.position.z))
-      this.targetRotation = Math.atan2(direction.x, direction.z)
+      this.targetRotation = Math.atan2(this._moveDir.x, this._moveDir.z)
     }
 
-    this.mesh.position = this.position.clone()
+    this.mesh.position.copyFrom(this.position)
 
     const currentRotation = this.mesh.rotation.y
     const rotationDiff = this.targetRotation - currentRotation
@@ -606,14 +625,6 @@ export class Player {
     return this.potStartTime
   }
 
-  getKickCooldown(): number {
-    return this.kickCooldown
-  }
-
-  getSwingCooldown(): number {
-    return this.swingCooldown
-  }
-
   getAttackCooldown(): number {
     return Math.max(this.kickCooldown, this.swingCooldown)
   }
@@ -638,14 +649,6 @@ export class Player {
 
   isInvisible(): boolean {
     return this.invisibleActive
-  }
-
-  getCameraPosition(): Vector3 {
-    return new Vector3(this.position.x - 8.4, 10, this.position.z + 8.4)
-  }
-
-  getCameraTarget(): Vector3 {
-    return new Vector3(this.position.x, 0, this.position.z)
   }
 
   dispose(): void {

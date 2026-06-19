@@ -19,6 +19,7 @@ export interface Projectile {
 }
 
 export class ProjectileSystem {
+  private static _tmpVec = new Vector3()
   private scene: Scene
   private projectiles: Projectile[] = []
 
@@ -71,8 +72,10 @@ export class ProjectileSystem {
       }
 
       p.velocity.y -= 9.8 * delta
-      p.position.addInPlace(p.velocity.scale(delta))
-      p.mesh.position = p.position.clone()
+      // 复用 _tmpVec 避免每帧 new Vector3
+      ProjectileSystem._tmpVec.copyFrom(p.velocity).scaleInPlace(delta)
+      p.position.addInPlace(ProjectileSystem._tmpVec)
+      p.mesh.position.copyFrom(p.position)
 
       p.mesh.rotation.x += delta * 5
       p.mesh.rotation.z += delta * 3

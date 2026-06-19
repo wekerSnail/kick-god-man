@@ -49,15 +49,4 @@ export class CollisionSystem {
 
     return dot > Math.cos(halfAngle)
   }
-
-  checkKickHit(): boolean {
-    if (!this.player.getIsKicking()) return false
-    if (this.enemy.isLookingBack()) return false
-
-    const distance = Vector3.Distance(this.player.getPosition(), this.enemy.getPosition())
-    if (distance < 2) {
-      return true
-    }
-    return false
-  }
 }

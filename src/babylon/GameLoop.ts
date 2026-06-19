@@ -3,7 +3,6 @@ import {
   Vector3,
   Color4,
   ParticleSystem,
-  MeshBuilder,
   FreeCamera
 } from '@babylonjs/core'
 import { EngineContext } from './core/EngineContext'
@@ -61,13 +60,19 @@ export class GameLoop {
   private kickCounted: boolean = false
   private patrolDamageCooldown: number = 0
   private wasPatrolling: boolean = false
-  private _clickHandler: (() => void) | null = null
+  // 复用 Vector3，避免每帧 GC（P0.1）
+  private _cameraOffset = new Vector3()
+  private _cameraTarget = new Vector3()
+  private _clickHandler: ((e: PointerEvent) => void) | null = null
   private canvas: HTMLCanvasElement | null = null
   private easterEggMode: EasterEggMode | null = null
   private isEasterEgg = false
   private _easterFireStart: (() => void) | null = null
   private _easterFireStop: (() => void) | null = null
   private _pendingShake = false
+  // 状态推送节流（P1）：离散字段变化即推送，连续数值每 100ms 推送一次
+  private _continuousTimer: number = 0
+  private _lastPushedState: Record<string, unknown> = {}
 
   constructor(container: HTMLElement, onStateChange: (state: any) => void) {
     this.onStateChange = onStateChange
@@ -78,8 +83,7 @@ export class GameLoop {
     this.canvas.style.height = '100%'
     container.appendChild(this.canvas)
 
-    // 传递 canvas 给 InputManager，以便在 canvas 上添加鼠标事件
-    this.input = new InputManager(this.canvas)
+    this.input = new InputManager()
 
     this.engineContext = new EngineContext(this.canvas)
     this.scene = this.engineContext.scene
@@ -115,10 +119,11 @@ export class GameLoop {
       this.hidingSpots
     )
 
-    this._clickHandler = () => this.player.kick()
-    setTimeout(() => {
-      document.addEventListener('click', this._clickHandler!)
-    }, 100)
+    // 左键踢击，直接监听 canvas（P4.2 修复：去掉 setTimeout + document）
+    this._clickHandler = (e: PointerEvent) => {
+      if (e.button === 0) this.player.kick()
+    }
+    this.canvas!.addEventListener('pointerdown', this._clickHandler as EventListener)
 
     this.inventory.push({
       id: 'starter-mace',
@@ -200,19 +205,20 @@ export class GameLoop {
     const playerPos = this.player.getPosition()
     const dist = 12
     const height = 10
-    const cameraOffset = new Vector3(
+    this._cameraOffset.set(
       playerPos.x - dist * 0.7,
       height,
       playerPos.z + dist * 0.7
     )
-    const cameraTarget = new Vector3(playerPos.x, 0, playerPos.z)
+    this._cameraTarget.set(playerPos.x, 0, playerPos.z)
 
-    this.camera.position = Vector3.Lerp(
+    Vector3.LerpToRef(
       this.camera.position,
-      cameraOffset,
-      1 - Math.pow(0.001, delta)
+      this._cameraOffset,
+      1 - Math.pow(0.001, delta),
+      this.camera.position
     )
-    this.camera.setTarget(cameraTarget)
+    this.camera.setTarget(this._cameraTarget)
 
     this.enemy.update(
       delta,
@@ -412,6 +418,76 @@ export class GameLoop {
 
     this.updateInventory(delta)
 
+    this._pushStateThrottled(delta)
+  }
+
+  private _pushStateThrottled(delta: number): void {
+    // 离散字段：变化即推送
+    const discreteKickCount = this.kickCount
+    const discreteHealth = this.health
+    const discreteMaxHealth = this.maxHealth
+    const discreteIsGameOver = this.isGameOver
+    const discreteIsWin = this.isWin
+    const discreteScore = this.score
+    const discreteEnemyState = this.enemy.getState()
+    const discreteIsHidden = this.hidingSpots.isInHidingSpot(this.player.getPosition())
+    const discreteLevel = this.levelManager.getLevel()
+    const discreteKickTarget = this.levelManager.getKickTarget()
+    const discreteIsLevelTransition = this.levelManager.getIsTransitioning()
+    const discreteEquippedWeaponType = this.player.getEquippedWeapon()?.type ?? null
+    const discreteIsCharging = this.player.isCharging()
+    const discreteCombo = this.player.isComboActive()
+    const discreteInvisible = this.player.isInvisible()
+    const discretePatrol = this.enemy.isPatrolling()
+    const discreteInventoryLen = this.inventory.length
+
+    const prev = this._lastPushedState
+    const discreteChanged =
+      prev['kickCount'] !== discreteKickCount ||
+      prev['health'] !== discreteHealth ||
+      prev['maxHealth'] !== discreteMaxHealth ||
+      prev['isGameOver'] !== discreteIsGameOver ||
+      prev['isWin'] !== discreteIsWin ||
+      prev['score'] !== discreteScore ||
+      prev['enemyState'] !== discreteEnemyState ||
+      prev['isHidden'] !== discreteIsHidden ||
+      prev['level'] !== discreteLevel ||
+      prev['kickTarget'] !== discreteKickTarget ||
+      prev['isLevelTransition'] !== discreteIsLevelTransition ||
+      prev['equippedWeaponType'] !== discreteEquippedWeaponType ||
+      prev['isCharging'] !== discreteIsCharging ||
+      prev['combo'] !== discreteCombo ||
+      prev['invisible'] !== discreteInvisible ||
+      prev['patrol'] !== discretePatrol ||
+      prev['inventoryLen'] !== discreteInventoryLen
+
+    // 连续字段：100ms 节流
+    this._continuousTimer += delta
+    const continuousDue = this._continuousTimer >= 0.1
+
+    if (!discreteChanged && !continuousDue) return
+
+    if (continuousDue) this._continuousTimer = 0
+
+    // 记录离散字段快照
+    prev['kickCount'] = discreteKickCount
+    prev['health'] = discreteHealth
+    prev['maxHealth'] = discreteMaxHealth
+    prev['isGameOver'] = discreteIsGameOver
+    prev['isWin'] = discreteIsWin
+    prev['score'] = discreteScore
+    prev['enemyState'] = discreteEnemyState
+    prev['isHidden'] = discreteIsHidden
+    prev['level'] = discreteLevel
+    prev['kickTarget'] = discreteKickTarget
+    prev['isLevelTransition'] = discreteIsLevelTransition
+    prev['equippedWeaponType'] = discreteEquippedWeaponType
+    prev['isCharging'] = discreteIsCharging
+    prev['combo'] = discreteCombo
+    prev['invisible'] = discreteInvisible
+    prev['patrol'] = discretePatrol
+    prev['inventoryLen'] = discreteInventoryLen
+
     this.onStateChange({
       kickCount: this.kickCount,
       health: this.health,
@@ -497,8 +573,8 @@ export class GameLoop {
   }
 
   dispose(): void {
-    if (this._clickHandler) {
-      document.removeEventListener('click', this._clickHandler)
+    if (this._clickHandler && this.canvas) {
+      this.canvas.removeEventListener('pointerdown', this._clickHandler as EventListener)
     }
     if (this.canvas?.parentNode) {
       this.canvas.parentNode.removeChild(this.canvas)
@@ -599,11 +675,8 @@ export class GameLoop {
 
   private createVictoryParticles(): void {
     const particleSystem = new ParticleSystem('victory', 100, this.scene)
-    const emitter = MeshBuilder.CreateBox('emitter', { size: 0.1 }, this.scene)
-    emitter.position = this.player.getPosition().clone()
-    emitter.position.y += 1
-    emitter.isVisible = false
-    particleSystem.emitter = emitter
+    const playerPos = this.player.getPosition()
+    particleSystem.emitter = new Vector3(playerPos.x, playerPos.y + 1, playerPos.z)
 
     particleSystem.createBoxEmitter(
       new Vector3(-1, 2, -1),

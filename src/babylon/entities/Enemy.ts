@@ -52,6 +52,8 @@ export class Enemy {
   private _playerDetectedInLookBack: boolean = false
   private _lookBackGameOverPending: boolean = false
   private meetingSwayTime: number = 0
+  // 对话定时器（P4.3 替代 setTimeout）
+  private _dialogueTimer: number = 0
 
   constructor(
     scene: Scene,
@@ -100,7 +102,7 @@ export class Enemy {
       root.scaling = new Vector3(scale, scale, scale)
     }
 
-    this.mesh.position = this.position.clone()
+    this.mesh.position.copyFrom(this.position)
     this.mesh.rotation.y = Math.PI
   }
 
@@ -149,6 +151,15 @@ export class Enemy {
   update(delta: number, _playerPosition: Vector3, _playerIsInvisible: boolean): void {
     this.stateMachine.update(delta)
     this.updateWalkAnimation(delta)
+
+    // 对话计时器（P4.3 替代 setTimeout）
+    if (this._dialogueTimer > 0) {
+      this._dialogueTimer -= delta
+      if (this._dialogueTimer <= 0) {
+        this._dialogueTimer = 0
+        if (this.dialogueSprite) this.dialogueSprite.isVisible = false
+      }
+    }
   }
 
   playAnimation(name: string, loop: boolean = true): boolean {
@@ -237,12 +248,7 @@ export class Enemy {
 
     this.dialogueSprite.position = new Vector3(this.position.x, this.position.y + 3.8, this.position.z)
     this.dialogueSprite.isVisible = true
-
-    setTimeout(() => {
-      if (this.dialogueSprite) {
-        this.dialogueSprite.isVisible = false
-      }
-    }, duration * 1000)
+    this._dialogueTimer = duration
   }
 
   private wrapText(text: string, maxChars: number): string[] {
@@ -412,7 +418,7 @@ export class Enemy {
       Math.cos(this.mesh.rotation.y)
     )
     this.position.addInPlace(moveDir.scaleInPlace(speed * dt))
-    this.mesh.position = this.position.clone()
+    this.mesh.position.copyFrom(this.position)
 
     return false
   }
@@ -422,8 +428,8 @@ export class Enemy {
     const distance = direction.length()
 
     if (distance < 0.5) {
-      this.position = this.originalPosition.clone()
-      this.mesh.position = this.position.clone()
+      this.position.copyFrom(this.originalPosition)
+      this.mesh.position.copyFrom(this.position)
       this.isWalking = false
       // 重置旋转到初始朝向（面向桌子）
       this.mesh.rotation.y = Math.PI
@@ -433,7 +439,7 @@ export class Enemy {
     this.isWalking = true
     direction.normalize()
     this.position.addInPlace(direction.scaleInPlace(speed * dt))
-    this.mesh.position = this.position.clone()
+    this.mesh.position.copyFrom(this.position)
 
     const targetRotation = Math.atan2(direction.x, direction.z)
     const currentRotation = this.mesh.rotation.y
@@ -539,10 +545,6 @@ export class Enemy {
     return this.position
   }
 
-  getHeadPosition(): Vector3 {
-    return new Vector3(this.position.x, this.position.y + 2, this.position.z)
-  }
-
   setRotationY(angle: number): void {
     this.mesh.rotation.y = angle
   }
@@ -551,7 +553,7 @@ export class Enemy {
    * 同步 position 到 mesh（用于外部直接修改 position 后调用）
    */
   syncPosition(): void {
-    this.mesh.position = this.position.clone()
+    this.mesh.position.copyFrom(this.position)
   }
 
   /**
