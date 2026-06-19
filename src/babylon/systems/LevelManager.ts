@@ -62,4 +62,8 @@ export class LevelManager {
     this.level++
     this.kickTarget = this.kickTargets[this.level - 1] ?? this.kickTargets[this.kickTargets.length - 1]
   }
+
+  clearTransitioning(): void {
+    this.isTransitioning = false
+  }
 }

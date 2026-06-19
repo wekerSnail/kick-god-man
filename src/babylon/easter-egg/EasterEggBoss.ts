@@ -40,7 +40,8 @@ export class EasterEggBoss {
     this._walkDirection = 1
 
     // 传送 Boss 到房间中央
-    this._enemy.position = new Vector3(0, 0, -5)
+    this._enemy.position.set(0, 0, -5)
+    this._enemy.syncPosition()
 
     // 重置受击状态
     this._isShaking = false

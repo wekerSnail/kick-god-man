@@ -160,7 +160,11 @@ export class GameLoop {
 
     // 彩蛋模式：跳过主游戏逻辑，只更新彩蛋子系统
     if (this.isEasterEgg && this.easterEggMode) {
-      this.easterEggMode.update(delta)
+      // 保存引用——update 内部可能触发 _handleComplete → stopEasterEgg → easterEggMode = null
+      const egg = this.easterEggMode
+      egg.update(delta)
+      // 如果彩蛋在 update 期间结束（easterEggMode 已被 stopEasterEgg 置 null），跳过彩蛋状态推送
+      if (!this.easterEggMode) return
       this.onStateChange({
         kickCount: this.kickCount,
         health: this.health,
@@ -184,8 +188,8 @@ export class GameLoop {
         invisibleActive: false,
         isPatrolWarning: false,
         isEasterEgg: true,
-        easterEggTimeRemaining: this.easterEggMode.timeRemaining,
-        easterEggWeaponType: this.easterEggMode.currentWeaponType,
+        easterEggTimeRemaining: egg.timeRemaining,
+        easterEggWeaponType: egg.currentWeaponType,
         easterEggWeapons: EASTER_EGG_WEAPONS.map(w => ({ type: w.type, name: w.name })),
         grenadeShake: this._pendingShake
       })
@@ -757,6 +761,9 @@ export class GameLoop {
 
   advanceLevelAfterEasterEgg(): void {
     this.levelManager.advanceLevel()
+    // advanceLevel 不重置 isTransitioning，必须手动清除，
+    // 否则游戏循环会持续推送 isLevelTransition: true，导致过渡画面立即再次弹出
+    this.levelManager.clearTransitioning()
     this.kickCount = 0
     this.kickCounted = false
     this.player.resetForNextLevel()
