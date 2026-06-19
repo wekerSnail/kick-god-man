@@ -7,6 +7,8 @@ const WALK_BOUND_X = 6 // x 轴走动范围 [-6, 6]
 const SHAKE_DURATION = 0.5 // 枪击抖动持续秒数
 const STUN_DURATION = 3 // 爆炸眩晕持续秒数
 const DIALOGUE_DURATION = 2 // 吐槽台词显示秒数
+const BOUNCE_HEIGHT = 0.8 // 弹跳高度
+const BOUNCE_DURATION = 0.4 // 弹跳总时长（上升+下降）
 
 /**
  * 彩蛋模式 Boss 行为控制器
@@ -24,6 +26,9 @@ export class EasterEggBoss {
   private _shakeTimer = 0
   private _isStunned = false
   private _stunTimer = 0
+  private _isBouncing = false
+  private _bounceTimer = 0
+  private _bounceStartY = 0
   private _isDialogueOnCooldown = false
   private _lastDialogueIndex = -1
 
@@ -48,6 +53,8 @@ export class EasterEggBoss {
     this._shakeTimer = 0
     this._isStunned = false
     this._stunTimer = 0
+    this._isBouncing = false
+    this._bounceTimer = 0
   }
 
   /**
@@ -57,6 +64,8 @@ export class EasterEggBoss {
     this._isActive = false
     this._isShaking = false
     this._isStunned = false
+    this._isBouncing = false
+    this._bounceTimer = 0
   }
 
   /**
@@ -68,18 +77,24 @@ export class EasterEggBoss {
     // 更新受击状态
     this._updateHitReaction(delta)
 
-    // 如果正在受击，不移动
-    if (this._isShaking || this._isStunned) return
+    // 如果正在受击（含弹跳），不移动
+    if (this._isShaking || this._isStunned || this._isBouncing) return
 
     // 左右走动
     this._walk(delta)
   }
 
   /**
-   * 被枪击中：抖动 + 停止移动 + 随机吐槽
+   * 被枪击中：弹跳 + 抖动 + 停止移动 + 随机吐槽
+   * 连续击中可打断弹跳重新触发
    */
   onHitByGun(): void {
     if (this._isStunned) return // 已经眩晕则忽略
+
+    // 重置弹跳（可打断）
+    this._isBouncing = true
+    this._bounceTimer = 0
+    this._bounceStartY = this._enemy.position.y
 
     this._isShaking = true
     this._shakeTimer = SHAKE_DURATION
@@ -87,9 +102,14 @@ export class EasterEggBoss {
   }
 
   /**
-   * 被火箭炮/手榴弹击中：眩晕 3s
+   * 被火箭炮/手榴弹击中：弹跳 + 眩晕 3s
    */
   onHitByExplosion(): void {
+    // 先触发弹跳
+    this._isBouncing = true
+    this._bounceTimer = 0
+    this._bounceStartY = this._enemy.position.y
+
     this._isStunned = true
     this._stunTimer = STUN_DURATION
     this._isShaking = false
@@ -101,7 +121,7 @@ export class EasterEggBoss {
    * 是否正在受击（抖动或眩晕）
    */
   get isReacting(): boolean {
-    return this._isShaking || this._isStunned
+    return this._isShaking || this._isStunned || this._isBouncing
   }
 
   /**
@@ -115,6 +135,23 @@ export class EasterEggBoss {
    * 更新受击反应
    */
   private _updateHitReaction(delta: number): void {
+    // 弹跳效果（Y 轴抛物线，可被打断重置）
+    if (this._isBouncing) {
+      this._bounceTimer += delta
+      const t = this._bounceTimer / BOUNCE_DURATION
+      if (t >= 1) {
+        // 弹跳结束，回到地面
+        this._isBouncing = false
+        this._enemy.position.y = this._bounceStartY
+        this._enemy.syncPosition()
+      } else {
+        // 正弦曲线模拟弹跳：0→1→0
+        const bounce = Math.sin(t * Math.PI) * BOUNCE_HEIGHT
+        this._enemy.position.y = this._bounceStartY + bounce
+        this._enemy.syncPosition()
+      }
+    }
+
     // 抖动效果
     if (this._isShaking) {
       this._shakeTimer -= delta

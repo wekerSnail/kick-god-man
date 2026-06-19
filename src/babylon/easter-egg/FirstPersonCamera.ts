@@ -18,7 +18,8 @@ export class FirstPersonCamera {
   private _mouseMoveHandler: ((e: MouseEvent) => void) | null = null
   private _yaw = 0 // 水平旋转角
   private _pitch = 0 // 垂直旋转角
-  private _sensitivity = 0.003 // 鼠标灵敏度
+  private _sensitivityX = 0.003 // 水平鼠标灵敏度
+  private _sensitivityY = 0.005 // 垂直鼠标灵敏度（更高，方便手雷瞄准）
 
   // 武器跟随回调
   private _weaponSwayCallback: WeaponSwayCallback | null = null
@@ -100,8 +101,8 @@ export class FirstPersonCamera {
   private _onMouseMove(e: MouseEvent): void {
     if (!this._isActive) return
 
-    const deltaYaw = e.movementX * this._sensitivity
-    const deltaPitch = -e.movementY * this._sensitivity
+    const deltaYaw = e.movementX * this._sensitivityX
+    const deltaPitch = -e.movementY * this._sensitivityY
 
     this._yaw += deltaYaw
     this._pitch += deltaPitch

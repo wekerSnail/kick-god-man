@@ -102,6 +102,15 @@ export class AssetManager {
       })
 
       this.cache.set(key, root)
+      // 隐藏源节点，仅用于克隆——直接返回源会导致 dispose 时破坏缓存
+      root.setEnabled(false)
+      const firstClone = root.clone(`${key}_first`, null)
+      if (firstClone) {
+        firstClone.setEnabled(true)
+        return firstClone
+      }
+      // 克隆失败时回退：启用源并返回（与旧行为一致）
+      root.setEnabled(true)
       return root
     } catch (err) {
       console.warn(`[AssetManager] Failed to load prop ${key} from ${glbPath}:`, err)
@@ -116,6 +125,8 @@ export class AssetManager {
     if (!src) throw new Error(`Asset not loaded: ${key}`)
 
     const clone = src.clone(`${key}_${Date.now()}`, null)!
+    // 源节点已禁用（仅用于缓存），克隆体需要显式启用
+    clone.setEnabled(true)
     clone.getChildMeshes().forEach(m => {
       m.receiveShadows = true
       this.shadowGen.addShadowCaster(m)

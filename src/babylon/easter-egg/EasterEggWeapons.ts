@@ -186,14 +186,16 @@ export class EasterEggWeapons {
    * 火箭炮射击：导弹 + 烟雾尾迹
    */
   private _fireRocket(origin: Vector3, direction: Vector3): void {
-    // 创建导弹（更精致的形状）
+    // 创建导弹（更大更精致的形状）
     const rocket = MeshBuilder.CreateCylinder('rocket', {
-      height: 0.5,
-      diameterTop: 0.02,
-      diameterBottom: 0.12,
+      height: 1.2,
+      diameterTop: 0.05,
+      diameterBottom: 0.3,
       tessellation: 8
     }, this._scene)
+    // 射击起点略微上移，避免贴地
     rocket.position = origin.clone()
+    rocket.position.y += 0.2
 
     const mat = new StandardMaterial('rocketMat', this._scene)
     mat.emissiveColor = new Color3(1, 0.3, 0) // 橙红色
@@ -234,11 +236,11 @@ export class EasterEggWeapons {
     mat.emissiveColor = new Color3(0.15, 0.15, 0.15)
     grenade.material = mat
 
-    // 初始速度：向前 + 向上抛物线（较小弧度）
+    // 初始速度：向前 + 向上抛物线（鼠标上下控制弧度）
     const dir = direction.normalize()
     const velocity = new Vector3(
       dir.x * GRENADE_SPEED,
-      GRENADE_SPEED * 0.5, // 向上分量（减小弧度）
+      dir.y * GRENADE_SPEED * 2 + GRENADE_SPEED * 0.3, // dir.y 占主导，鼠标上下控制明显
       dir.z * GRENADE_SPEED
     )
 
@@ -363,45 +365,43 @@ export class EasterEggWeapons {
    */
   private _createRocketTrail(rocket: TransformNode): void {
     // 烟雾尾迹
-    const smoke = new ParticleSystem('rocketSmoke', 50, this._scene)
-    // 使用导弹本身作为发射器，粒子会跟随导弹移动
+    const smoke = new ParticleSystem('rocketSmoke', 80, this._scene)
     smoke.emitter = rocket.position
-    smoke.createSphereEmitter(0.08)
+    smoke.createSphereEmitter(0.15)
 
-    smoke.color1 = new Color4(0.8, 0.8, 0.8, 0.6)
-    smoke.color2 = new Color4(0.5, 0.5, 0.5, 0.3)
+    smoke.color1 = new Color4(0.8, 0.8, 0.8, 0.7)
+    smoke.color2 = new Color4(0.5, 0.5, 0.5, 0.4)
     smoke.colorDead = new Color4(0.3, 0.3, 0.3, 0)
 
-    smoke.minSize = 0.1
-    smoke.maxSize = 0.3
-    smoke.minLifeTime = 0.2
-    smoke.maxLifeTime = 0.5
+    smoke.minSize = 0.2
+    smoke.maxSize = 0.6
+    smoke.minLifeTime = 0.3
+    smoke.maxLifeTime = 0.8
 
-    smoke.emitRate = 100
-    smoke.gravity = new Vector3(0, -0.5, 0)
-    smoke.direction1 = new Vector3(-0.1, -0.1, -0.1)
-    smoke.direction2 = new Vector3(0.1, 0.1, 0.1)
+    smoke.emitRate = 150
+    smoke.gravity = new Vector3(0, -0.3, 0)
+    smoke.direction1 = new Vector3(-0.15, -0.15, -0.15)
+    smoke.direction2 = new Vector3(0.15, 0.15, 0.15)
 
     smoke.targetStopDuration = ROCKET_LIFETIME
     smoke.disposeOnStop = true
     smoke.start()
 
     // 火焰尾焰
-    const fire = new ParticleSystem('rocketFire', 30, this._scene)
-    // 使用导弹本身作为发射器，粒子会跟随导弹移动
+    const fire = new ParticleSystem('rocketFire', 50, this._scene)
     fire.emitter = rocket.position
-    fire.createSphereEmitter(0.05)
+    fire.createSphereEmitter(0.1)
 
     fire.color1 = new Color4(1, 0.8, 0, 1)
     fire.color2 = new Color4(1, 0.3, 0, 0.8)
     fire.colorDead = new Color4(1, 0, 0, 0)
 
-    fire.minSize = 0.05
-    fire.maxSize = 0.15
+    fire.minSize = 0.1
+    fire.maxSize = 0.3
     fire.minLifeTime = 0.05
-    fire.maxLifeTime = 0.2
+    fire.maxLifeTime = 0.25
 
-    fire.emitRate = 80
+    fire.emitRate = 120
     fire.gravity = Vector3.Zero()
 
     fire.targetStopDuration = ROCKET_LIFETIME
@@ -482,7 +482,7 @@ export class EasterEggWeapons {
   private _updateAimLine(origin: Vector3, direction: Vector3): void {
     const dir = direction.normalize()
     const vx = dir.x * GRENADE_SPEED
-    const vy = GRENADE_SPEED * 0.5
+    const vy = dir.y * GRENADE_SPEED * 2 + GRENADE_SPEED * 0.3
     const vz = dir.z * GRENADE_SPEED
 
     const gravity = GRENADE_GRAVITY

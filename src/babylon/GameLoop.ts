@@ -71,8 +71,8 @@ export class GameLoop {
   private canvas: HTMLCanvasElement | null = null
   private easterEggMode: EasterEggMode | null = null
   private isEasterEgg = false
-  private _easterFireStart: (() => void) | null = null
-  private _easterFireStop: (() => void) | null = null
+  private _easterFireStart: ((e: MouseEvent) => void) | null = null
+  private _easterFireStop: ((e: MouseEvent) => void) | null = null
   private _pendingShake = false
   // 状态推送节流（P1）：离散字段变化即推送，连续数值每 100ms 推送一次
   private _continuousTimer: number = 0
@@ -727,10 +727,15 @@ export class GameLoop {
     this.easterEggMode.setShakeCallback(() => { this._pendingShake = true })
 
     // 注册射击输入
-    this._easterFireStart = () => this.easterEggMode?.onFireStart()
-    this._easterFireStop = () => this.easterEggMode?.onFireStop()
-    this.canvas?.addEventListener('mousedown', this._easterFireStart)
-    this.canvas?.addEventListener('mouseup', this._easterFireStop)
+    this._easterFireStart = (e: MouseEvent) => { if (e.button === 0) this.easterEggMode?.onFireStart() }
+    this._easterFireStop = (e: MouseEvent) => { if (e.button === 0) this.easterEggMode?.onFireStop() }
+    this.canvas?.addEventListener('mousedown', this._easterFireStart as EventListener)
+    this.canvas?.addEventListener('mouseup', this._easterFireStop as EventListener)
+
+    // 隐藏 CSS 准星（pointer lock 失败时防止出现双准星）
+    if (this.canvas) {
+      this.canvas.style.cursor = 'none'
+    }
   }
 
   stopEasterEgg(): void {
@@ -753,6 +758,11 @@ export class GameLoop {
 
     // 重置生命值，避免残留低血量
     this.health = this.maxHealth
+
+    // 恢复 CSS 准星
+    if (this.canvas) {
+      this.canvas.style.cursor = ''
+    }
   }
 
   switchEasterEggWeapon(type: EasterEggWeaponType): void {

@@ -31,6 +31,7 @@ export class RightHand {
   private _assetManager: AssetManager
   private _weaponNode: TransformNode | null = null
   private _weaponModel: TransformNode | null = null
+  private _weaponCache: Map<EasterEggWeaponType, TransformNode> = new Map()
   private _isActive = false
   private _idleTime = 0
   private _switchGeneration = 0
@@ -75,19 +76,28 @@ export class RightHand {
 
   /**
    * 切换武器模型
+   * 使用缓存池避免重复加载和 dispose 导致的模型丢失
    */
   async switchWeapon(weaponType: EasterEggWeaponType): Promise<void> {
-    // 卸下旧武器
+    if (!this._weaponNode) return
+
+    // 隐藏当前武器（不 dispose，放入缓存池）
     if (this._weaponModel) {
-      this._weaponModel.dispose()
+      this._weaponModel.setEnabled(false)
       this._weaponModel = null
     }
 
-    if (!this._weaponNode) return
+    // 检查缓存池中是否已有该武器
+    if (this._weaponCache.has(weaponType)) {
+      const cached = this._weaponCache.get(weaponType)!
+      cached.setEnabled(true)
+      this._weaponModel = cached
+      return
+    }
 
     const gen = ++this._switchGeneration
 
-    // 加载武器 GLB 模型
+    // 加载武器 GLB 模型（首次加载）
     try {
       const glbPath = WEAPON_URLS[weaponType]
       console.log(`[RightHand] Loading weapon from: ${glbPath}`)
@@ -100,17 +110,21 @@ export class RightHand {
         return
       }
 
-      this._weaponModel = weaponRoot
-      this._weaponModel.parent = this._weaponNode
+      weaponRoot.parent = this._weaponNode
 
-      // 调整武器大小
-      this._weaponModel.scaling = new Vector3(0.15, 0.15, 0.15)
+      // 调整武器大小（火箭炮更大）
+      const scale = weaponType === 'rocket' ? 0.25 : 0.15
+      weaponRoot.scaling = new Vector3(scale, scale, scale)
 
       // 调整武器方向 - 枪口朝前
-      this._weaponModel.rotation = new Vector3(0, Math.PI, 0)
+      weaponRoot.rotation = new Vector3(0, Math.PI, 0)
 
       // 武器位置微调
-      this._weaponModel.position = new Vector3(0, 0, 0)
+      weaponRoot.position = new Vector3(0, 0, 0)
+
+      // 放入缓存池
+      this._weaponCache.set(weaponType, weaponRoot)
+      this._weaponModel = weaponRoot
 
       console.log(`[RightHand] Successfully loaded weapon: ${weaponType}`)
     } catch (e) {
@@ -241,6 +255,12 @@ export class RightHand {
   }
 
   dispose(): void {
+    // 清理武器缓存池
+    for (const cached of this._weaponCache.values()) {
+      cached.dispose()
+    }
+    this._weaponCache.clear()
+
     if (this._weaponModel) {
       this._weaponModel.dispose()
       this._weaponModel = null
