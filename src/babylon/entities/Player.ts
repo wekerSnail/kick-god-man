@@ -732,6 +732,34 @@ export class Player {
     return this.invisibleActive
   }
 
+  resetForNextLevel(): void {
+    this.position.set(0, 0, 5)
+    this.mesh.position.set(0, 0, 5)
+    this.mesh.rotation.y = 0
+    this.kickCooldown = 0
+    this.isKicking = false
+    this.kickAnimationTime = 0
+    this.potActive = false
+    this.potStartTime = 0
+    this.comboActive = false
+    this.invisibleActive = false
+    this.invisibleStartTime = 0
+    this.isSwingingWeapon = false
+    this.swingTime = 0
+    this.swingCooldown = 0
+    this.isChargingThrow = false
+    this.throwChargeTime = 0
+    this.equippedWeapon = null
+    if (this.weaponMesh) {
+      this.weaponMesh.dispose()
+      this.weaponMesh = null
+    }
+    this.equippedKeyboard = false
+    this._keyboardConsumed = false
+    if (this.keyboardShield) this.keyboardShield.setEnabled(false)
+    this.playAnimation('Idle')
+  }
+
   dispose(): void {
     if (this.cooldownBarBg) {
       this.cooldownBarBg.dispose()

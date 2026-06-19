@@ -108,6 +108,12 @@ export class ProjectileSystem {
     this.projectiles.splice(index, 1)
   }
 
+  clear(): void {
+    for (let i = this.projectiles.length - 1; i >= 0; i--) {
+      this.removeProjectile(i)
+    }
+  }
+
   dispose(): void {
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
       this.removeProjectile(i)

@@ -89,19 +89,19 @@ export class AttackedState implements IState<Enemy> {
         }
         break
       case 'looking':
-        if (this.timer >= this.LOOK_DURATION) {
-          if (this.playerPosition) {
-            const dist = ctx.position.subtract(this.playerPosition).length()
-            if (dist < 5) {
-              if (ctx.isPlayerUsingKeyboard()) {
-                this.detectedWithKeyboard = true
-                ctx.setPlayerDetected(true)
-              } else {
-                this.detectedPlayer = true
-                ctx.setPlayerDetected(true)
-              }
+        if (!this.detectedPlayer && !this.detectedWithKeyboard && this.playerPosition) {
+          const dist = ctx.position.subtract(this.playerPosition).length()
+          if (dist < 5) {
+            if (ctx.isPlayerUsingKeyboard()) {
+              this.detectedWithKeyboard = true
+              ctx.setPlayerDetected(true)
+            } else {
+              this.detectedPlayer = true
+              ctx.setPlayerDetected(true)
             }
           }
+        }
+        if (this.timer >= this.LOOK_DURATION) {
           this.phase = 'dialogue2'
           this.timer = 0
         }
@@ -212,11 +212,11 @@ export class LookingBackState implements IState<Enemy> {
         }
         break;
       case "looking":
-        if (this.timer >= this.LOOK_DURATION) {
-          const detected = ctx.checkPlayerDetection();
-          if (detected) {
-            this.detectedPlayer = true;
-          }
+        if (ctx.checkPlayerDetection()) {
+          this.detectedPlayer = true;
+          this.phase = "dialogue";
+          this.timer = 0;
+        } else if (this.timer >= this.LOOK_DURATION) {
           this.phase = "dialogue";
           this.timer = 0;
         }
@@ -229,7 +229,7 @@ export class LookingBackState implements IState<Enemy> {
         }
         if (this.timer >= this.DIALOGUE_DURATION) {
           if (this.detectedPlayer) {
-            ctx.reportPlayerDetected();
+            ctx.reportLookBackDamage();
           }
           this.phase = "turning_back";
           this.timer = 0;

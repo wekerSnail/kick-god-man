@@ -157,6 +157,13 @@ export class Props {
     return this.props
   }
 
+  clear(): void {
+    this.props.forEach(prop => {
+      prop.mesh.dispose()
+    })
+    this.props = []
+  }
+
   dispose(): void {
     this.props.forEach(prop => {
       prop.mesh.dispose()

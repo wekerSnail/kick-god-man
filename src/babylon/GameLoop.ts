@@ -59,9 +59,8 @@ export class GameLoop {
   }[] = []
   private onStateChange: (state: any) => void
   private kickCounted: boolean = false
-  private patrolDamageCooldown: number = 0
   private semicircleDetected: boolean = false
-  private semicircleRecoveryCooldown: number = 0
+  private detectionCooldown: number = 0
   private lastAttackTime: number = -10
   private elapsedTime: number = 0
   private wasPatrolling: boolean = false
@@ -159,6 +158,11 @@ export class GameLoop {
       return
     }
 
+    if (this.levelManager.getIsTransitioning()) {
+      this._pushStateThrottled(delta)
+      return
+    }
+
     // 彩蛋模式：跳过主游戏逻辑，只更新彩蛋子系统
     if (this.isEasterEgg && this.easterEggMode) {
       this.easterEggMode.update(delta)
@@ -241,17 +245,17 @@ export class GameLoop {
     }
     this.wasPatrolling = this.enemy.isPatrolling()
 
-    this.patrolDamageCooldown = Math.max(0, this.patrolDamageCooldown - delta)
-    this.semicircleRecoveryCooldown = Math.max(0, this.semicircleRecoveryCooldown - delta)
+    this.detectionCooldown = Math.max(0, this.detectionCooldown - delta)
 
     if (this.semicircleDetected) {
       if (!this.collisionSystem.isPlayerInSemicircle()) {
         this.semicircleDetected = false
-        this.semicircleRecoveryCooldown = 3.0
+        this.detectionCooldown = 5.0
       }
-    } else if (this.semicircleRecoveryCooldown <= 0) {
+    } else if (this.detectionCooldown <= 0) {
       if (
         !this.enemy.isStunned() &&
+        !this.enemy.isLookingBack() &&
         !this.player.isInvisible() &&
         !this.hidingSpots.isInHidingSpot(this.player.getPosition()) &&
         this.collisionSystem.isPlayerInSemicircle()
@@ -286,8 +290,8 @@ export class GameLoop {
 
     if (this.collisionSystem.checkEnemyDetection()) {
       if (this.enemy.isPatrolling()) {
-        if (this.patrolDamageCooldown <= 0) {
-          this.patrolDamageCooldown = 1.0
+        if (this.detectionCooldown <= 0) {
+          this.detectionCooldown = 5.0
           if (this.player.isInvisible()) {
             // invisible: no damage
           } else if (this.player.getPotActive()) {
@@ -330,21 +334,25 @@ export class GameLoop {
     }
 
     if (this.enemy.isLookingBack()) {
-      // 检查玩家是否在隐藏点或使用键盘盾牌
       const isHidden = this.hidingSpots.isInHidingSpot(this.player.getPosition())
       const hasPot = this.player.getPotActive()
 
-      // 如果玩家不在隐藏点且没有使用键盘盾牌，检查距离
-      if (!isHidden && !hasPot) {
+      if (!isHidden && !hasPot && this.detectionCooldown <= 0) {
         const dist = Vector3.Distance(this.player.getPosition(), this.enemy.getPosition())
         if (dist < 6) {
           this.enemy.setLookBackDetected(true)
+          this.detectionCooldown = 5.0
         }
       }
     }
 
-    if (this.enemy.consumeLookBackGameOver()) {
-      this.gameOver(false)
+    if (this.enemy.consumeLookBackDamage()) {
+      this.health--
+      this.audio.play('hit')
+      if (this.health <= 0) {
+        this.health = 0
+        this.gameOver(false)
+      }
     }
 
     if ((this.player.getIsKicking() || this.player.getIsSwinging()) && !this.levelManager.getIsTransitioning()) {
@@ -801,5 +809,9 @@ export class GameLoop {
     this.levelManager.completeTransition()
     this.kickCount = 0
     this.kickCounted = false
+    this.player.resetForNextLevel()
+    this.enemy.resetForNextLevel()
+    this.projectileSystem.clear()
+    this.props.clear()
   }
 }

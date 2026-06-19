@@ -62,6 +62,7 @@ export class Enemy {
   private _playerUsingKeyboardDuringAttack: boolean = false
   private _playerDetectedInLookBack: boolean = false
   private _lookBackGameOverPending: boolean = false
+  private _lookBackDamagePending: boolean = false
   private meetingSwayTime: number = 0
   // 对话定时器（P4.3 替代 setTimeout）
   private _dialogueTimer: number = 0
@@ -339,6 +340,16 @@ export class Enemy {
   consumeLookBackGameOver(): boolean {
     const result = this._lookBackGameOverPending
     this._lookBackGameOverPending = false
+    return result
+  }
+
+  reportLookBackDamage(): void {
+    this._lookBackDamagePending = true
+  }
+
+  consumeLookBackDamage(): boolean {
+    const result = this._lookBackDamagePending
+    this._lookBackDamagePending = false
     return result
   }
 
@@ -645,6 +656,32 @@ export class Enemy {
     const diff = targetAngle - current
     const normalizedDiff = Math.atan2(Math.sin(diff), Math.cos(diff))
     this.mesh.rotation.y += normalizedDiff * speed * dt
+  }
+
+  resetForNextLevel(): void {
+    this.position.set(0, 0, -5.8)
+    this.originalPosition.set(0, 0, -5.8)
+    this.mesh.position.set(0, 0, -5.8)
+    this.mesh.rotation.set(0, Math.PI, 0)
+    this.isWalking = false
+    this._playerDetectedDuringAttack = false
+    this._playerUsingKeyboardDuringAttack = false
+    this._playerDetectedInLookBack = false
+    this._lookBackGameOverPending = false
+    this._lookBackDamagePending = false
+    this._dialogueTimer = 0
+    this.stateMachine.forceState(new NormalState())
+    this.scheduleNextLookBack()
+    this._nextMeetingTime = 15
+    this._nextPatrolTime = 25
+    if (this.dialogueSprite) this.dialogueSprite.isVisible = false
+    if (this.exclSprite) this.exclSprite.isVisible = false
+    if (this.phoneLight) this.phoneLight.intensity = 0
+    this.showStunIndicator(false)
+    this.showMeetingIndicator(false)
+    this.showPatrolWarning(false)
+    this.resetMeetingSway()
+    this.playAnimation('Idle')
   }
 
   dispose(): void {
