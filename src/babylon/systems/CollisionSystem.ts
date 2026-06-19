@@ -40,6 +40,24 @@ export class CollisionSystem {
     return false
   }
 
+  isPlayerInSemicircle(): boolean {
+    const enemyPos = this.enemy.getPosition()
+    const playerPos = this.player.getPosition()
+    const distance = Vector3.Distance(enemyPos, playerPos)
+    if (distance > 5) return false
+
+    const angle = this.enemy.getRotationY()
+    const forward = CollisionSystem._tmpForward
+    forward.set(Math.sin(angle), 0, Math.cos(angle)).normalize()
+
+    const toPlayer = CollisionSystem._tmpToPlayer
+    playerPos.subtractToRef(enemyPos, toPlayer)
+    toPlayer.y = 0
+    toPlayer.normalize()
+
+    return Vector3.Dot(forward, toPlayer) > 0
+  }
+
   private checkPatrolVision(): boolean {
     const enemyPos = this.enemy.getPosition()
     const playerPos = this.player.getPosition()

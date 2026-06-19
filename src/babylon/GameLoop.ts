@@ -42,6 +42,7 @@ export class GameLoop {
   private health: number = 3
   private maxHealth: number = 3
   private isGameOver: boolean = false
+  private _gameOverPending: boolean = false
   private isWin: boolean = false
   private score: number = 0
   private inventory: {
@@ -59,6 +60,10 @@ export class GameLoop {
   private onStateChange: (state: any) => void
   private kickCounted: boolean = false
   private patrolDamageCooldown: number = 0
+  private semicircleDetected: boolean = false
+  private semicircleRecoveryCooldown: number = 0
+  private lastAttackTime: number = -10
+  private elapsedTime: number = 0
   private wasPatrolling: boolean = false
   // 复用 Vector3，避免每帧 GC（P0.1）
   private _cameraOffset = new Vector3()
@@ -147,6 +152,13 @@ export class GameLoop {
   private update(delta: number): void {
     if (this.isGameOver) return
 
+    this.elapsedTime += delta
+
+    if (this._gameOverPending) {
+      this._pushStateThrottled(delta)
+      return
+    }
+
     // 彩蛋模式：跳过主游戏逻辑，只更新彩蛋子系统
     if (this.isEasterEgg && this.easterEggMode) {
       this.easterEggMode.update(delta)
@@ -230,6 +242,47 @@ export class GameLoop {
     this.wasPatrolling = this.enemy.isPatrolling()
 
     this.patrolDamageCooldown = Math.max(0, this.patrolDamageCooldown - delta)
+    this.semicircleRecoveryCooldown = Math.max(0, this.semicircleRecoveryCooldown - delta)
+
+    if (this.semicircleDetected) {
+      if (!this.collisionSystem.isPlayerInSemicircle()) {
+        this.semicircleDetected = false
+        this.semicircleRecoveryCooldown = 3.0
+      }
+    } else if (this.semicircleRecoveryCooldown <= 0) {
+      if (
+        !this.enemy.isStunned() &&
+        !this.player.isInvisible() &&
+        !this.hidingSpots.isInHidingSpot(this.player.getPosition()) &&
+        this.collisionSystem.isPlayerInSemicircle()
+      ) {
+        this.semicircleDetected = true
+        const recentlyAttacked = (this.elapsedTime - this.lastAttackTime) < 3
+        if (this.player.getPotActive()) {
+          this.health -= 0.5
+          this.enemy.showDialogue('你以为你挡着我就看不到你？这个需求就你做了', 3)
+        } else if (recentlyAttacked) {
+          this.health--
+          this.enemy.showDialogue('就是你小子打我，今晚留下来加班', 3)
+        } else if (this.enemy.isPatrolling()) {
+          this.health--
+          this.enemy.showDialogue('巡逻还敢乱跑？给我站住！', 2)
+        } else if (this.enemy.isLookingBack()) {
+          this.health--
+          this.enemy.showDialogue('果然在偷懒！被我抓到了吧', 2)
+        } else if (this.enemy.isInMeeting()) {
+          this.health--
+          this.enemy.showDialogue('开会你都敢溜？胆子不小啊', 2)
+        } else {
+          this.health--
+          this.enemy.showDialogue('你在瞎晃悠什么！', 2)
+        }
+        this.audio.play('hit')
+        if (this.health <= 0) {
+          this.gameOver(false)
+        }
+      }
+    }
 
     if (this.collisionSystem.checkEnemyDetection()) {
       if (this.enemy.isPatrolling()) {
@@ -310,6 +363,7 @@ export class GameLoop {
             }
             this.levelManager.onKick(this.kickCount)
             this.enemy.onAttacked(this.player.getPosition(), this.player.getPotActive())
+            this.lastAttackTime = this.elapsedTime
           }
         } else if (this.player.getIsKicking() && !this.kickCounted) {
           if (distance < 2) {
@@ -321,6 +375,7 @@ export class GameLoop {
               this.createVictoryParticles()
             }
             this.enemy.onAttacked(this.player.getPosition(), this.player.getPotActive())
+            this.lastAttackTime = this.elapsedTime
           }
         }
       } else if (this.enemy.isInMeeting()) {
@@ -342,6 +397,7 @@ export class GameLoop {
             }
             this.levelManager.onKick(this.kickCount)
             this.enemy.onAttacked(this.player.getPosition(), this.player.getPotActive())
+            this.lastAttackTime = this.elapsedTime
           }
         } else if (this.player.getIsKicking() && distance < 2) {
           this.kickCount++
@@ -352,6 +408,7 @@ export class GameLoop {
             this.createVictoryParticles()
           }
           this.enemy.onAttacked(this.player.getPosition(), this.player.getPotActive())
+          this.lastAttackTime = this.elapsedTime
         }
       }
     }
@@ -579,8 +636,18 @@ export class GameLoop {
   }
 
   private gameOver(win: boolean): void {
-    this.isGameOver = true
-    this.isWin = win
+    if (this._gameOverPending || this.isGameOver) return
+    if (win) {
+      this.isGameOver = true
+      this.isWin = true
+    } else {
+      this._gameOverPending = true
+      this.isWin = false
+      setTimeout(() => {
+        this.isGameOver = true
+        this._pushStateThrottled(0)
+      }, 3000)
+    }
   }
 
   resize(): void {
@@ -721,6 +788,7 @@ export class GameLoop {
     this.health = 3
     this.maxHealth = 3
     this.isGameOver = false
+    this._gameOverPending = false
     this.isWin = false
     this.score = 0
     this.inventory = []
