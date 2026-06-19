@@ -158,11 +158,6 @@ export class GameLoop {
       return
     }
 
-    if (this.levelManager.getIsTransitioning()) {
-      this._pushStateThrottled(delta)
-      return
-    }
-
     // 彩蛋模式：跳过主游戏逻辑，只更新彩蛋子系统
     if (this.isEasterEgg && this.easterEggMode) {
       this.easterEggMode.update(delta)
@@ -195,6 +190,11 @@ export class GameLoop {
         grenadeShake: this._pendingShake
       })
       this._pendingShake = false
+      return
+    }
+
+    if (this.levelManager.getIsTransitioning() && !this.isEasterEgg) {
+      this._pushStateThrottled(delta)
       return
     }
 
@@ -585,9 +585,9 @@ export class GameLoop {
       comboActive: this.player.isComboActive(),
       invisibleActive: this.player.isInvisible(),
       isPatrolWarning: this.enemy.isPatrolling(),
-      isEasterEgg: false,
-      easterEggTimeRemaining: 0,
-      easterEggWeaponType: null
+      isEasterEgg: this.isEasterEgg,
+      easterEggTimeRemaining: this.easterEggMode?.timeRemaining ?? 0,
+      easterEggWeaponType: this.easterEggMode?.currentWeaponType ?? null
     })
   }
 
@@ -708,6 +708,8 @@ export class GameLoop {
   }
 
   async startEasterEgg(onComplete?: () => void): Promise<void> {
+    this._gameOverPending = false
+    this._pendingShake = false
     this.isEasterEgg = true
     this.isGameOver = false
     this.isWin = false
@@ -741,13 +743,9 @@ export class GameLoop {
     this.easterEggMode = null
     this.isEasterEgg = false
 
-    // 重置敌人检测状态，避免彩蛋模式结束后立即触发游戏结束
-    this.enemy.setLookBackDetected(false)
-    this.enemy.consumeLookBackGameOver()
-
-    // 恢复敌人到正常状态（传送回原位）
-    this.enemy.position = new Vector3(0, 0, 0)
-    this.enemy.syncPosition()
+    // 完整重置敌人和玩家状态
+    this.enemy.resetForNextLevel()
+    this.player.resetForNextLevel()
 
     // 重置生命值，避免残留低血量
     this.health = this.maxHealth
@@ -761,6 +759,10 @@ export class GameLoop {
     this.levelManager.advanceLevel()
     this.kickCount = 0
     this.kickCounted = false
+    this.player.resetForNextLevel()
+    this.enemy.resetForNextLevel()
+    this.projectileSystem.clear()
+    this.props.clear()
   }
 
   private createVictoryParticles(): void {
