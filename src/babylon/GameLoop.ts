@@ -142,13 +142,13 @@ export class GameLoop {
   }
 
   start(): void {
-    this.engineContext.start((dt) => this.update(dt))
+    this.engineContext.start(async (dt) => await this.update(dt))
   }
 
   stop(): void {
   }
 
-  private update(delta: number): void {
+  private async update(delta: number): Promise<void> {
     if (this.isGameOver) return
 
     this.elapsedTime += delta
@@ -162,7 +162,7 @@ export class GameLoop {
     if (this.isEasterEgg && this.easterEggMode) {
       // 保存引用——update 内部可能触发 _handleComplete → stopEasterEgg → easterEggMode = null
       const egg = this.easterEggMode
-      egg.update(delta)
+      await egg.update(delta)
       // 如果彩蛋在 update 期间结束（easterEggMode 已被 stopEasterEgg 置 null），跳过彩蛋状态推送
       if (!this.easterEggMode) return
       this.onStateChange({

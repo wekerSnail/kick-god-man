@@ -9,8 +9,9 @@ import {
   Animation
 } from '@babylonjs/core'
 
-const FIRE_PARTICLE_COUNT = 50
-const SMOKE_PARTICLE_COUNT = 30
+const FIRE_PARTICLE_COUNT = 100
+const SMOKE_PARTICLE_COUNT = 60
+const SPARK_PARTICLE_COUNT = 40
 
 /**
  * 彩蛋模式爆炸效果
@@ -35,7 +36,9 @@ export class EasterEggExplosion {
   createExplosion(position: Vector3): void {
     this._createFireParticles(position)
     this._createSmokeParticles(position)
+    this._createSparkParticles(position)
     this._createShockwave(position)
+    this._createFlashLight(position)
     this._onShake?.()
   }
 
@@ -46,24 +49,24 @@ export class EasterEggExplosion {
     const ps = new ParticleSystem('explosionFire', FIRE_PARTICLE_COUNT, this._scene)
     ps.emitter = position.clone()
 
-    ps.createSphereEmitter(0.5)
+    ps.createSphereEmitter(0.8)
 
-    ps.color1 = new Color4(1, 0.6, 0, 1)   // 橙色
-    ps.color2 = new Color4(1, 0.2, 0, 1)   // 红色
-    ps.colorDead = new Color4(0.3, 0, 0, 0) // 暗红消失
+    ps.color1 = new Color4(1, 0.8, 0, 1)   // 亮黄色
+    ps.color2 = new Color4(1, 0.3, 0, 1)   // 橙红色
+    ps.colorDead = new Color4(0.5, 0, 0, 0) // 暗红消失
 
-    ps.minSize = 0.1
-    ps.maxSize = 0.4
-    ps.minLifeTime = 0.2
-    ps.maxLifeTime = 0.5
+    ps.minSize = 0.15
+    ps.maxSize = 0.6
+    ps.minLifeTime = 0.3
+    ps.maxLifeTime = 0.7
 
-    ps.emitRate = FIRE_PARTICLE_COUNT * 2 // 快速爆发
-    ps.gravity = new Vector3(0, 2, 0) // 向上飘
+    ps.emitRate = FIRE_PARTICLE_COUNT * 3 // 快速爆发
+    ps.gravity = new Vector3(0, 3, 0) // 向上飘
 
-    ps.minEmitPower = 2
-    ps.maxEmitPower = 5
+    ps.minEmitPower = 3
+    ps.maxEmitPower = 8
 
-    ps.targetStopDuration = 0.2 // 短时间发射
+    ps.targetStopDuration = 0.15 // 短时间发射
     ps.disposeOnStop = true
     ps.name = 'explosionFire'
     ps.start()
@@ -76,26 +79,56 @@ export class EasterEggExplosion {
     const ps = new ParticleSystem('explosionSmoke', SMOKE_PARTICLE_COUNT, this._scene)
     ps.emitter = position.clone()
 
-    ps.createSphereEmitter(0.8)
+    ps.createSphereEmitter(1.2)
 
-    ps.color1 = new Color4(0.5, 0.5, 0.5, 0.6) // 灰色半透明
-    ps.color2 = new Color4(0.3, 0.3, 0.3, 0.4)
+    ps.color1 = new Color4(0.6, 0.6, 0.6, 0.7) // 灰色半透明
+    ps.color2 = new Color4(0.4, 0.4, 0.4, 0.5)
     ps.colorDead = new Color4(0.2, 0.2, 0.2, 0)
 
-    ps.minSize = 0.2
-    ps.maxSize = 0.6
-    ps.minLifeTime = 0.8
-    ps.maxLifeTime = 1.5
+    ps.minSize = 0.3
+    ps.maxSize = 1.0
+    ps.minLifeTime = 1.0
+    ps.maxLifeTime = 2.0
 
-    ps.emitRate = SMOKE_PARTICLE_COUNT
-    ps.gravity = new Vector3(0, 1, 0) // 缓慢上升
+    ps.emitRate = SMOKE_PARTICLE_COUNT * 2
+    ps.gravity = new Vector3(0, 1.5, 0) // 缓慢上升
 
-    ps.minEmitPower = 0.5
-    ps.maxEmitPower = 2
+    ps.minEmitPower = 1
+    ps.maxEmitPower = 3
 
-    ps.targetStopDuration = 0.3
+    ps.targetStopDuration = 0.25
     ps.disposeOnStop = true
     ps.name = 'explosionSmoke'
+    ps.start()
+  }
+
+  /**
+   * 火花粒子：明亮的火花四溅效果
+   */
+  private _createSparkParticles(position: Vector3): void {
+    const ps = new ParticleSystem('explosionSparks', SPARK_PARTICLE_COUNT, this._scene)
+    ps.emitter = position.clone()
+
+    ps.createSphereEmitter(0.3)
+
+    ps.color1 = new Color4(1, 1, 0.5, 1)   // 亮黄色
+    ps.color2 = new Color4(1, 0.8, 0, 1)   // 金色
+    ps.colorDead = new Color4(1, 0.4, 0, 0) // 橙色消失
+
+    ps.minSize = 0.05
+    ps.maxSize = 0.15
+    ps.minLifeTime = 0.2
+    ps.maxLifeTime = 0.5
+
+    ps.emitRate = SPARK_PARTICLE_COUNT * 4 // 快速爆发
+    ps.gravity = new Vector3(0, -5, 0) // 向下掉落
+
+    ps.minEmitPower = 5
+    ps.maxEmitPower = 12
+
+    ps.targetStopDuration = 0.1 // 极短时间发射
+    ps.disposeOnStop = true
+    ps.name = 'explosionSparks'
     ps.start()
   }
 
@@ -107,12 +140,12 @@ export class EasterEggExplosion {
     sphere.position = position.clone()
 
     const mat = new StandardMaterial('shockwaveMat', this._scene)
-    mat.emissiveColor = new Color3(0.1, 0.1, 0.1)
-    mat.alpha = 0.5
+    mat.emissiveColor = new Color3(1, 0.5, 0) // 橙色发光
+    mat.alpha = 0.6
     mat.disableLighting = true
     sphere.material = mat
 
-    // 缩放动画：从 0 快速放大到 6
+    // 缩放动画：从 0 快速放大到 8
     const scaleAnim = new Animation(
       'shockwaveScale',
       'scaling',
@@ -121,8 +154,8 @@ export class EasterEggExplosion {
       Animation.ANIMATIONLOOPMODE_CONSTANT
     )
     scaleAnim.setKeys([
-      { frame: 0, value: new Vector3(0.5, 0.5, 0.5) },
-      { frame: 15, value: new Vector3(6, 6, 6) }
+      { frame: 0, value: new Vector3(0.3, 0.3, 0.3) },
+      { frame: 10, value: new Vector3(8, 8, 8) }
     ])
 
     // 透明度动画：从 0.6 到 0
@@ -134,14 +167,61 @@ export class EasterEggExplosion {
       Animation.ANIMATIONLOOPMODE_CONSTANT
     )
     alphaAnim.setKeys([
-      { frame: 0, value: 0.5 },
-      { frame: 15, value: 0 }
+      { frame: 0, value: 0.6 },
+      { frame: 10, value: 0 }
     ])
 
     sphere.animations = [scaleAnim, alphaAnim]
 
-    this._scene.beginAnimation(sphere, 0, 15, false, 1, () => {
+    this._scene.beginAnimation(sphere, 0, 10, false, 1, () => {
       sphere.dispose()
+      mat.dispose()
+    })
+  }
+
+  /**
+   * 爆炸闪光：瞬间的明亮闪光效果
+   */
+  private _createFlashLight(position: Vector3): void {
+    const flash = MeshBuilder.CreateSphere('explosionFlash', { diameter: 1.5 }, this._scene)
+    flash.position = position.clone()
+
+    const mat = new StandardMaterial('flashMat', this._scene)
+    mat.emissiveColor = new Color3(1, 0.9, 0.5) // 亮黄色
+    mat.alpha = 0.9
+    mat.disableLighting = true
+    flash.material = mat
+
+    // 快速消失动画
+    const alphaAnim = new Animation(
+      'flashAlpha',
+      'material.alpha',
+      30,
+      Animation.ANIMATIONTYPE_FLOAT,
+      Animation.ANIMATIONLOOPMODE_CONSTANT
+    )
+    alphaAnim.setKeys([
+      { frame: 0, value: 0.9 },
+      { frame: 5, value: 0 }
+    ])
+
+    // 缩放动画
+    const scaleAnim = new Animation(
+      'flashScale',
+      'scaling',
+      30,
+      Animation.ANIMATIONTYPE_VECTOR3,
+      Animation.ANIMATIONLOOPMODE_CONSTANT
+    )
+    scaleAnim.setKeys([
+      { frame: 0, value: new Vector3(0.5, 0.5, 0.5) },
+      { frame: 5, value: new Vector3(2, 2, 2) }
+    ])
+
+    flash.animations = [alphaAnim, scaleAnim]
+
+    this._scene.beginAnimation(flash, 0, 5, false, 1, () => {
+      flash.dispose()
       mat.dispose()
     })
   }

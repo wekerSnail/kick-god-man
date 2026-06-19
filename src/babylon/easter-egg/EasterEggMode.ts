@@ -74,7 +74,7 @@ export class EasterEggMode {
     this._explosion = new EasterEggExplosion(this._scene)
     this._explosion.setShakeCallback(() => this._onShake?.())
     this._boss = new EasterEggBoss(this._enemy)
-    this._weapons = new EasterEggWeapons(this._scene, this._boss)
+    this._weapons = new EasterEggWeapons(this._scene, this._boss, this._assetManager)
     this._weapons.setExplosion(this._explosion)
     this._camera = new FirstPersonCamera(this._mainCamera, this._canvas)
     this._rightHand = new RightHand(this._scene, this._assetManager)
@@ -91,6 +91,7 @@ export class EasterEggMode {
 
     // 加载武器系统
     await this._rightHand.load()
+    await this._weapons.preloadGrenadeModel() // 预加载手雷模型用于抛射物
 
     // 设置相机引用（武器跟随相机）
     this._rightHand.setCamera(this._mainCamera!)
@@ -126,7 +127,7 @@ export class EasterEggMode {
     this._onComplete = null
   }
 
-  update(delta: number): void {
+  async update(delta: number): Promise<void> {
     if (!this._isActive) return
 
     // 倒计时
@@ -147,7 +148,7 @@ export class EasterEggMode {
     // 使用右手武器实际世界位置作为射击起点
     const fireOrigin = this._rightHand.getWeaponWorldPosition()
     const fireDirection = this._camera.getForwardDirection()
-    this._weapons.update(delta, fireOrigin, fireDirection)
+    await this._weapons.update(delta, fireOrigin, fireDirection)
   }
 
   /**

@@ -94,7 +94,7 @@ export class EasterEggBoss {
     // 重置弹跳（可打断）
     this._isBouncing = true
     this._bounceTimer = 0
-    this._bounceStartY = this._enemy.position.y
+    this._bounceStartY = 0 // 始终从地面弹起，避免连续击中越跳越高
 
     this._isShaking = true
     this._shakeTimer = SHAKE_DURATION
@@ -108,7 +108,7 @@ export class EasterEggBoss {
     // 先触发弹跳
     this._isBouncing = true
     this._bounceTimer = 0
-    this._bounceStartY = this._enemy.position.y
+    this._bounceStartY = 0 // 始终从地面弹起，避免连续击中越跳越高
 
     this._isStunned = true
     this._stunTimer = STUN_DURATION

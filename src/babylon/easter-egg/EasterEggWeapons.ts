@@ -12,6 +12,7 @@ import {
 import type { EasterEggWeaponType } from '../../types/game'
 import { EASTER_EGG_WEAPONS } from '../../types/game'
 import type { EasterEggBoss } from './EasterEggBoss'
+import type { AssetManager } from '../core/AssetManager'
 
 // EasterEggExplosion 将在 Task 11 中创建
 interface EasterEggExplosion {
@@ -32,6 +33,10 @@ const GRENADE_SPEED = 10
 const GRENADE_GRAVITY = -9.8
 const GRENADE_DETONATE_DELAY = 0.5 // 落地后延迟爆炸
 const GRENADE_LIFETIME = 3
+const GRENADE_EXPLOSION_RADIUS = 2.0 // 手榴弹爆炸半径（与红圈标识一致）
+
+// 手榴弹 GLB 模型路径
+const GRENADE_MODEL_URL = new URL('/models/kenney_blaster-kit_2.1/grenade-a.glb', import.meta.url).href
 
 interface Projectile {
   node: TransformNode
@@ -53,6 +58,7 @@ type RecoilCallback = (intensity: number) => void
 export class EasterEggWeapons {
   private _scene: Scene
   private _boss: EasterEggBoss
+  private _assetManager: AssetManager | null = null
   private _explosion: EasterEggExplosion | null = null
   private _projectiles: Projectile[] = []
   private _fireCooldown = 0
@@ -64,10 +70,28 @@ export class EasterEggWeapons {
   private _landingIndicator: Mesh | null = null
   private _landingIndicatorMat: StandardMaterial | null = null
   private _grenadeInFlight = false
+  private _grenadeModelLoaded = false
 
-  constructor(scene: Scene, boss: EasterEggBoss) {
+  constructor(scene: Scene, boss: EasterEggBoss, assetManager?: AssetManager) {
     this._scene = scene
     this._boss = boss
+    this._assetManager = assetManager ?? null
+  }
+
+  /**
+   * 预加载手雷模型（只加载到缓存，不显示在场景中）
+   */
+  async preloadGrenadeModel(): Promise<void> {
+    if (!this._assetManager || this._grenadeModelLoaded) return
+
+    try {
+      const clone = await this._assetManager.loadProp('grenade_projectile', GRENADE_MODEL_URL)
+      clone.setEnabled(false) // 隐藏预加载的克隆体，避免显示在地上
+      this._grenadeModelLoaded = true
+      console.log('[EasterEggWeapons] Grenade model preloaded successfully')
+    } catch (e) {
+      console.warn('[EasterEggWeapons] Failed to preload grenade model, will use placeholder', e)
+    }
   }
 
   setExplosion(explosion: EasterEggExplosion): void {
@@ -110,13 +134,13 @@ export class EasterEggWeapons {
    * @param fireOrigin 射击起点（右手位置）
    * @param fireDirection 射击方向（相机朝向）
    */
-  update(delta: number, fireOrigin: Vector3, fireDirection: Vector3): void {
+  async update(delta: number, fireOrigin: Vector3, fireDirection: Vector3): Promise<void> {
     // 更新冷却
     this._fireCooldown = Math.max(0, this._fireCooldown - delta)
 
     // 处理射击输入
     if (this._isFiring && this._fireCooldown <= 0) {
-      this._fire(fireOrigin, fireDirection)
+      await this._fire(fireOrigin, fireDirection)
       const config = EASTER_EGG_WEAPONS.find(w => w.type === this._currentWeaponType)!
       this._fireCooldown = 1 / config.fireRate
     }
@@ -135,7 +159,7 @@ export class EasterEggWeapons {
   /**
    * 射击
    */
-  private _fire(origin: Vector3, direction: Vector3): void {
+  private async _fire(origin: Vector3, direction: Vector3): Promise<void> {
     switch (this._currentWeaponType) {
       case 'gun':
         this._fireGun(origin, direction)
@@ -146,7 +170,7 @@ export class EasterEggWeapons {
         this._recoilCallback?.(0.08) // 火箭炮后坐力更大
         break
       case 'grenade':
-        this._fireGrenade(origin, direction)
+        await this._fireGrenade(origin, direction)
         this._recoilCallback?.(0.05) // 手榴弹后坐力
         break
     }
@@ -228,13 +252,23 @@ export class EasterEggWeapons {
   /**
    * 手榴弹射击：抛物线投掷
    */
-  private _fireGrenade(origin: Vector3, direction: Vector3): void {
-    const grenade = MeshBuilder.CreateSphere('grenade', { diameter: 0.12 }, this._scene)
-    grenade.position = origin.clone()
+  private async _fireGrenade(origin: Vector3, direction: Vector3): Promise<void> {
+    let grenade: TransformNode
 
-    const mat = new StandardMaterial('grenadeMat', this._scene)
-    mat.emissiveColor = new Color3(0.15, 0.15, 0.15)
-    grenade.material = mat
+    // 尝试使用真实手雷模型
+    if (this._assetManager && this._grenadeModelLoaded) {
+      try {
+        grenade = await this._assetManager.loadProp('grenade_projectile', GRENADE_MODEL_URL)
+        grenade.scaling = new Vector3(0.3, 0.3, 0.3) // 增大到0.3，更明显
+      } catch (e) {
+        console.warn('[EasterEggWeapons] Failed to clone grenade model, using placeholder', e)
+        grenade = this._createGrenadePlaceholder()
+      }
+    } else {
+      grenade = this._createGrenadePlaceholder()
+    }
+
+    grenade.position = origin.clone()
 
     // 初始速度：向前 + 向上抛物线（鼠标上下控制弧度）
     const dir = direction.normalize()
@@ -259,6 +293,17 @@ export class EasterEggWeapons {
   }
 
   /**
+   * 创建手雷占位几何体（当模型加载失败时）
+   */
+  private _createGrenadePlaceholder(): TransformNode {
+    const grenade = MeshBuilder.CreateSphere('grenade', { diameter: 0.12 }, this._scene)
+    const mat = new StandardMaterial('grenadeMat', this._scene)
+    mat.emissiveColor = new Color3(0.15, 0.15, 0.15)
+    grenade.material = mat
+    return grenade
+  }
+
+  /**
    * 更新所有抛射物
    */
   private _updateProjectiles(delta: number): void {
@@ -276,14 +321,16 @@ export class EasterEggWeapons {
       // 更新生命周期
       proj.lifetime -= delta
 
-      // 命中检测
-      const bossPos = this._boss.position
-      const dist = Vector3.Distance(proj.node.position, bossPos)
+      // 命中检测（手雷除外，手雷通过落地爆炸机制处理）
+      if (proj.type !== 'grenade') {
+        const bossPos = this._boss.position
+        const dist = Vector3.Distance(proj.node.position, bossPos)
 
-      if (dist < HIT_RADIUS) {
-        this._onHit(proj)
-        this._removeProjectile(i)
-        continue
+        if (dist < HIT_RADIUS) {
+          this._onHit(proj)
+          this._removeProjectile(i)
+          continue
+        }
       }
 
       // 手榴弹落地检测
@@ -301,9 +348,9 @@ export class EasterEggWeapons {
       if (proj.isDetonating) {
         proj.detonateTimer -= delta
         if (proj.detonateTimer <= 0) {
-          // 检查爆炸范围
+          // 检查爆炸范围（与红圈标识一致）
           const bossDist = Vector3.Distance(proj.node.position, this._boss.position)
-          if (bossDist < HIT_RADIUS * 2) {
+          if (bossDist < GRENADE_EXPLOSION_RADIUS) {
             this._boss.onHitByExplosion()
           }
           this._explosion?.createExplosion(proj.node.position.clone())
@@ -328,6 +375,11 @@ export class EasterEggWeapons {
         this._boss.onHitByGun()
         break
       case 'rocket':
+        this._boss.onHitByExplosion()
+        this._explosion?.createExplosion(proj.node.position.clone())
+        break
+      case 'grenade':
+        // 手雷直接命中Boss时也会爆炸
         this._boss.onHitByExplosion()
         this._explosion?.createExplosion(proj.node.position.clone())
         break
@@ -554,7 +606,7 @@ export class EasterEggWeapons {
   private _updateLandingIndicator(pos: Vector3): void {
     if (!this._landingIndicator) {
       this._landingIndicator = MeshBuilder.CreateDisc('landingCircle',
-        { radius: 2.0, tessellation: 32 }, this._scene)
+        { radius: GRENADE_EXPLOSION_RADIUS, tessellation: 32 }, this._scene)
       this._landingIndicator.rotation.x = Math.PI / 2
 
       this._landingIndicatorMat = new StandardMaterial('landingMat', this._scene)

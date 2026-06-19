@@ -110,7 +110,7 @@ export class EngineContext {
     return p
   }
 
-  start(onTick: (dt: number) => void): void {
+  start(onTick: (dt: number) => void | Promise<void>): void {
     let last = performance.now()
     this.scene.onBeforeRenderObservable.add(() => {
       const now = performance.now()
