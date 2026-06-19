@@ -48,8 +48,10 @@ export class Enemy {
   private patrolTextSprite: Sprite | null = null
   private patrolWaypoints: Vector3[] = []
   private currentWaypointIndex: number = 0
-  private patrolDistanceTraveled: number = 0
-  private nextTurnDistance: number = 0
+  private _lastPatrolPos = new Vector3()
+  private _stuckCheckTimer: number = 0
+  private _stuckDuration: number = 0
+  private _stuckSide: number = 1
 
   private exclSpriteManager: SpriteManager | null = null
   private exclSprite: Sprite | null = null
@@ -403,8 +405,10 @@ export class Enemy {
   startPatrolWalk(): void {
     this.regeneratePatrolWaypoints()
     this.currentWaypointIndex = 1
-    this.patrolDistanceTraveled = 0
-    this.nextTurnDistance = 2 + Math.random() * 3
+    this._lastPatrolPos.copyFrom(this.position)
+    this._stuckCheckTimer = 0
+    this._stuckDuration = 0
+    this._stuckSide = Math.random() < 0.5 ? 1 : -1
   }
 
   moveAlongPatrol(dt: number, speed: number): boolean {
@@ -423,37 +427,45 @@ export class Enemy {
         this.isWalking = false
         return true
       }
-      // 到达路径点后，重新设置下一次转向距离
-      this.nextTurnDistance = 2 + Math.random() * 3
-      this.patrolDistanceTraveled = 0
       this.isWalking = true
       return false
     }
 
-    // 检查是否需要随机转向
-    this.patrolDistanceTraveled += speed * dt
-    if (this.patrolDistanceTraveled >= this.nextTurnDistance) {
-      // 靠近边界时强制反向，否则随机转向
-      const nearBoundary = Math.abs(this.position.x) > 8 || Math.abs(this.position.z) > 8
-      if (nearBoundary) {
-        this.mesh.rotation.y += Math.PI
+    // 朝向路径点移动
+    this.isWalking = true
+    const moveDir = Enemy._tmpMove
+    Enemy._tmpDir.normalizeToRef(moveDir)
+
+    // 卡住检测：每0.5秒检查一次累积位移，如果位移太小说明被卡住
+    this._stuckCheckTimer += dt
+    if (this._stuckCheckTimer >= 0.5) {
+      const distMoved = Vector3.Distance(this.position, this._lastPatrolPos)
+      if (distMoved < 0.3) {
+        this._stuckDuration += 0.5
       } else {
-        const turnDirection = Math.random() < 0.5 ? 1 : -1
-        this.mesh.rotation.y += turnDirection * Math.PI / 2
+        this._stuckDuration = 0
       }
-      this.patrolDistanceTraveled = 0
-      this.nextTurnDistance = 2 + Math.random() * 3
+      this._lastPatrolPos.copyFrom(this.position)
+      this._stuckCheckTimer = 0
     }
 
-    this.isWalking = true
+    // 被卡住时用垂直方向绕行（选定一个方向不切换）
+    if (this._stuckDuration > 0) {
+      if (this._stuckDuration > 3) {
+        // 卡住超过3秒，跳过当前路径点
+        this._stuckDuration = 0
+        this.currentWaypointIndex++
+        if (this.currentWaypointIndex >= this.patrolWaypoints.length) {
+          this.isWalking = false
+          return true
+        }
+        return false
+      }
+      const perpX = -moveDir.z
+      const perpZ = moveDir.x
+      moveDir.set(perpX * this._stuckSide, 0, perpZ * this._stuckSide).normalize()
+    }
 
-    // 使用当前朝向移动（而不是直接朝向目标点）
-    const moveDir = Enemy._tmpMove
-    moveDir.set(
-      Math.sin(this.mesh.rotation.y),
-      0,
-      Math.cos(this.mesh.rotation.y)
-    )
     const newX = this.position.x + moveDir.x * speed * dt
     const newZ = this.position.z + moveDir.z * speed * dt
     const clampedX = Math.max(-9, Math.min(9, newX))
@@ -467,7 +479,9 @@ export class Enemy {
       this.position.x = clampedX
       this.position.z = clampedZ
     }
+
     this.mesh.position.copyFrom(this.position)
+    this.mesh.rotation.y = Math.atan2(moveDir.x, moveDir.z)
 
     return false
   }

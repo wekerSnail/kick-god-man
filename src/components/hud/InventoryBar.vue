@@ -21,7 +21,7 @@
         <template v-if="item">
           <span class="slot__icon">{{ iconCharOf(item.type) }}</span>
           <span class="slot__name">{{ item.name }}</span>
-          <span v-if="item.count > 1" class="slot__count">×{{ item.count }}</span>
+          <span class="slot__count">{{ item.count }}</span>
         </template>
         <span class="slot__key">{{ index + 1 }}</span>
       </button>
@@ -180,21 +180,26 @@ const accentOf = (t: string) => ICON_MAP[t]?.accent ?? 'var(--ink)'
 .slot__count {
   position: absolute;
   top: -6px;
-  left: -6px;
+  right: -6px;
   background: var(--vermilion);
   color: var(--paper);
   font-family: var(--font-display);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1;
-  padding: 2px 6px;
-  border-radius: var(--radius-pill);
-  box-shadow: 0 2px 6px rgba(255, 107, 107, 0.3);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(255, 107, 107, 0.4);
+  pointer-events: none;
 }
 .slot__key {
   position: absolute;
   top: 4px;
-  right: 6px;
+  left: 6px;
   font-family: var(--font-display);
   font-size: 11px;
   font-weight: 600;

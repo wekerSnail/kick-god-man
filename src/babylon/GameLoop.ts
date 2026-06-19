@@ -398,20 +398,25 @@ export class GameLoop {
     }
 
     const pickedUp = this.props.update(delta, this.player.getPosition())
-    if (pickedUp && this.inventory.length < 6) {
+    if (pickedUp) {
       const allConfigs = [...PROP_CONFIGS, ...WEAPON_CONFIGS]
       const config = allConfigs.find(c => c.type === pickedUp.type)
-      this.inventory.push({
-        id: pickedUp.id,
-        type: pickedUp.type,
-        name: config?.name ?? pickedUp.type,
-        icon: config?.icon ?? '?',
-        description: config?.description ?? '',
-        duration: pickedUp.duration,
-        active: false,
-        category: pickedUp.category,
-        count: 1
-      })
+      const existing = this.inventory.find(item => item.type === pickedUp.type)
+      if (existing) {
+        existing.count++
+      } else if (this.inventory.length < 6) {
+        this.inventory.push({
+          id: pickedUp.id,
+          type: pickedUp.type,
+          name: config?.name ?? pickedUp.type,
+          icon: config?.icon ?? '?',
+          description: config?.description ?? '',
+          duration: pickedUp.duration,
+          active: false,
+          category: pickedUp.category,
+          count: 1
+        })
+      }
     }
 
     if (this.player.isKeyboardConsumed()) {

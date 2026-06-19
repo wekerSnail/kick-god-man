@@ -388,7 +388,7 @@ export class PatrolState implements IState<Enemy> {
         ) {
           ctx.reportPatrolDamage();
         }
-        if (reached) {
+        if (reached || this.timer > 30) {
           this.phase = "return";
           this.timer = 0;
         }
