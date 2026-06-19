@@ -17,6 +17,11 @@ import { NormalState, AttackedState } from '../state/EnemyStates'
 const characterModelUrl = new URL('/models/characters/boss.glb', import.meta.url).href
 
 export class Enemy {
+  private static readonly _WHITE = Color3.FromHexString('#ffffff')
+  private static readonly _tmpDir = new Vector3()
+  private static readonly _tmpMove = new Vector3()
+  private static readonly _tmpReturnDir = new Vector3()
+
   private mesh: TransformNode
   private characterGroup: TransformNode
   private modelRoot: TransformNode | null = null
@@ -26,6 +31,8 @@ export class Enemy {
   private animationGroups: AnimationGroup[] = []
   private isWalking: boolean = false
   private currentAnimName: string = ''
+  private walkAnimGroup: AnimationGroup | null = null
+  private idleAnimGroup: AnimationGroup | null = null
 
   private stateMachine: StateMachine<Enemy>
   private _nextLookBackTime: number = 8
@@ -104,6 +111,13 @@ export class Enemy {
 
     this.mesh.position.copyFrom(this.position)
     this.mesh.rotation.y = Math.PI
+
+    this.walkAnimGroup = this.animationGroups.find(ag =>
+      ag.name.toLowerCase().includes('walk')
+    ) ?? null
+    this.idleAnimGroup = this.animationGroups.find(ag =>
+      ag.name.toLowerCase().includes('idle')
+    ) ?? null
   }
 
   private setupPatrolWaypoints(): void {
@@ -163,21 +177,32 @@ export class Enemy {
   }
 
   playAnimation(name: string, loop: boolean = true): boolean {
-    if (this.currentAnimName === name) return true
-    this.animationGroups.forEach(ag => ag.stop())
-    this.currentAnimName = name
-    const anim = this.animationGroups.find(ag =>
-      ag.name.toLowerCase().includes(name.toLowerCase())
-    )
-    if (anim) {
-      anim.loopAnimation = loop
-      anim.reset()
-      anim.start()
-      return true
+    let targetAnim: AnimationGroup | null = null
+    if (name === 'Walk') {
+      targetAnim = this.walkAnimGroup
+    } else if (name === 'Idle') {
+      targetAnim = this.idleAnimGroup
     } else {
+      targetAnim = this.animationGroups.find(ag =>
+        ag.name.toLowerCase().includes(name.toLowerCase())
+      ) ?? null
+    }
+
+    if (!targetAnim) {
       this.currentAnimName = ''
       return false
     }
+
+    if (this.currentAnimName === name && targetAnim.isPlaying) return true
+
+    this.animationGroups.forEach(ag => {
+      if (ag.isPlaying) ag.stop()
+    })
+    this.currentAnimName = name
+    targetAnim.loopAnimation = loop
+    targetAnim.reset()
+    targetAnim.start()
+    return true
   }
 
   resetWalking(): void {
@@ -287,7 +312,7 @@ export class Enemy {
   updatePhoneFlash(timer: number): void {
     if (this.phoneLight) {
       this.phoneLight.intensity = Math.sin(timer * 10) > 0 ? 2 : 0
-      this.phoneLight.diffuse = Color3.FromHexString('#ffffff')
+      this.phoneLight.diffuse = Enemy._WHITE
     }
   }
 
@@ -383,8 +408,8 @@ export class Enemy {
     }
 
     const target = this.patrolWaypoints[this.currentWaypointIndex]
-    const direction = target.subtract(this.position)
-    const distance = direction.length()
+    target.subtractToRef(this.position, Enemy._tmpDir)
+    const distance = Enemy._tmpDir.length()
 
     if (distance < 0.5) {
       this.currentWaypointIndex++
@@ -402,9 +427,14 @@ export class Enemy {
     // 检查是否需要随机转向
     this.patrolDistanceTraveled += speed * dt
     if (this.patrolDistanceTraveled >= this.nextTurnDistance) {
-      // 随机转向90度（左或右）
-      const turnDirection = Math.random() < 0.5 ? 1 : -1
-      this.mesh.rotation.y += turnDirection * Math.PI / 2
+      // 靠近边界时强制反向，否则随机转向
+      const nearBoundary = Math.abs(this.position.x) > 8 || Math.abs(this.position.z) > 8
+      if (nearBoundary) {
+        this.mesh.rotation.y += Math.PI
+      } else {
+        const turnDirection = Math.random() < 0.5 ? 1 : -1
+        this.mesh.rotation.y += turnDirection * Math.PI / 2
+      }
       this.patrolDistanceTraveled = 0
       this.nextTurnDistance = 2 + Math.random() * 3
     }
@@ -412,20 +442,23 @@ export class Enemy {
     this.isWalking = true
 
     // 使用当前朝向移动（而不是直接朝向目标点）
-    const moveDir = new Vector3(
+    const moveDir = Enemy._tmpMove
+    moveDir.set(
       Math.sin(this.mesh.rotation.y),
       0,
       Math.cos(this.mesh.rotation.y)
     )
     this.position.addInPlace(moveDir.scaleInPlace(speed * dt))
+    this.position.x = Math.max(-9, Math.min(9, this.position.x))
+    this.position.z = Math.max(-9, Math.min(9, this.position.z))
     this.mesh.position.copyFrom(this.position)
 
     return false
   }
 
   returnToStart(dt: number, speed: number): boolean {
-    const direction = this.originalPosition.subtract(this.position)
-    const distance = direction.length()
+    this.originalPosition.subtractToRef(this.position, Enemy._tmpReturnDir)
+    const distance = Enemy._tmpReturnDir.length()
 
     if (distance < 0.5) {
       this.position.copyFrom(this.originalPosition)
@@ -437,11 +470,11 @@ export class Enemy {
     }
 
     this.isWalking = true
-    direction.normalize()
-    this.position.addInPlace(direction.scaleInPlace(speed * dt))
+    Enemy._tmpReturnDir.normalize()
+    this.position.addInPlace(Enemy._tmpReturnDir.scaleInPlace(speed * dt))
     this.mesh.position.copyFrom(this.position)
 
-    const targetRotation = Math.atan2(direction.x, direction.z)
+    const targetRotation = Math.atan2(Enemy._tmpReturnDir.x, Enemy._tmpReturnDir.z)
     const currentRotation = this.mesh.rotation.y
     const rotationDiff = targetRotation - currentRotation
     const normalizedDiff = Math.atan2(Math.sin(rotationDiff), Math.cos(rotationDiff))

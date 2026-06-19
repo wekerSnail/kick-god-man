@@ -7,7 +7,8 @@ import {
   PBRMaterial,
   ShadowGenerator,
   MeshBuilder,
-  DynamicTexture
+  DynamicTexture,
+  AbstractMesh
 } from '@babylonjs/core'
 import type { InputManager } from '../core/InputManager'
 import type { AssetManager } from '../core/AssetManager'
@@ -49,6 +50,8 @@ export class Player {
   private cooldownHintTimer: number = 0
   private animationGroups: AnimationGroup[] = []
   private currentAnimName: string = ''
+  private walkAnimGroup: AnimationGroup | null = null
+  private idleAnimGroup: AnimationGroup | null = null
 
   private cooldownBarBg: TransformNode | null = null
   private cooldownBarFill: DynamicTexture | null = null
@@ -67,10 +70,16 @@ export class Player {
   private assetManager: AssetManager | null = null
   // 复用方向向量，避免每帧 new（P0.3）
   private _moveDir = Vector3.Zero()
+  // 缓存子网格列表，避免每帧 getChildMeshes() 分配数组
+  private _childMeshes: AbstractMesh[] = []
   // 进度条纹理缓存值，量化到 1%，避免每帧 GPU 上传（P2.1）
   private _lastCooldownPct: number = -1
   private _lastPotPct: number = -1
   private _lastThrowPct: number = -1
+  // 进度条可见性状态，与量化缓存分离
+  private _cooldownBarVisible = false
+  private _potBarVisible = false
+  private _throwBarVisible = false
 
   constructor(
     scene: Scene,
@@ -168,7 +177,15 @@ export class Player {
   private updateCooldownBarVisual(progress: number): void {
     if (!this.cooldownBarFill) return
 
-    // 量化到 1%，跳过无变化的帧
+    if (progress <= 0) {
+      if (this._cooldownBarVisible) {
+        this.cooldownBarMeshes.forEach(m => m.isVisible = false)
+        this._cooldownBarVisible = false
+        this._lastCooldownPct = -1
+      }
+      return
+    }
+
     const pct = Math.floor(progress * 100)
     if (pct === this._lastCooldownPct) return
     this._lastCooldownPct = pct
@@ -178,23 +195,27 @@ export class Player {
     const h = 8
     ctx.clearRect(0, 0, w, h)
 
-    if (progress <= 0) {
-      this.cooldownBarMeshes.forEach(m => m.isVisible = false)
-      this._lastCooldownPct = 0
-      return
+    if (!this._cooldownBarVisible) {
+      this.cooldownBarMeshes.forEach(m => m.isVisible = true)
+      this._cooldownBarVisible = true
     }
-
-    this.cooldownBarMeshes.forEach(m => m.isVisible = true)
     const fillW = Math.floor(w * progress)
-
     ctx.fillStyle = '#22C55E'
     ctx.fillRect(0, 0, fillW, h)
-
     this.cooldownBarFill.update()
   }
 
   private updatePotCooldownBarVisual(progress: number): void {
     if (!this.potCooldownBarFill) return
+
+    if (progress <= 0) {
+      if (this._potBarVisible) {
+        this.potCooldownBarMeshes.forEach(m => m.isVisible = false)
+        this._potBarVisible = false
+        this._lastPotPct = -1
+      }
+      return
+    }
 
     const pct = Math.floor(progress * 100)
     if (pct === this._lastPotPct) return
@@ -205,18 +226,13 @@ export class Player {
     const h = 8
     ctx.clearRect(0, 0, w, h)
 
-    if (progress <= 0) {
-      this.potCooldownBarMeshes.forEach(m => m.isVisible = false)
-      this._lastPotPct = 0
-      return
+    if (!this._potBarVisible) {
+      this.potCooldownBarMeshes.forEach(m => m.isVisible = true)
+      this._potBarVisible = true
     }
-
-    this.potCooldownBarMeshes.forEach(m => m.isVisible = true)
     const fillW = Math.floor(w * progress)
-
     ctx.fillStyle = '#3B82F6'
     ctx.fillRect(0, 0, fillW, h)
-
     this.potCooldownBarFill.update()
   }
 
@@ -260,6 +276,15 @@ export class Player {
   private updateThrowChargeBarVisual(progress: number): void {
     if (!this.throwChargeBarFill) return
 
+    if (progress <= 0) {
+      if (this._throwBarVisible) {
+        this.throwChargeBarMeshes.forEach(m => m.isVisible = false)
+        this._throwBarVisible = false
+        this._lastThrowPct = -1
+      }
+      return
+    }
+
     const pct = Math.floor(progress * 100)
     if (pct === this._lastThrowPct) return
     this._lastThrowPct = pct
@@ -269,18 +294,13 @@ export class Player {
     const h = 8
     ctx.clearRect(0, 0, w, h)
 
-    if (progress <= 0) {
-      this.throwChargeBarMeshes.forEach(m => m.isVisible = false)
-      this._lastThrowPct = 0
-      return
+    if (!this._throwBarVisible) {
+      this.throwChargeBarMeshes.forEach(m => m.isVisible = true)
+      this._throwBarVisible = true
     }
-
-    this.throwChargeBarMeshes.forEach(m => m.isVisible = true)
     const fillW = Math.floor(w * progress)
-
     ctx.fillStyle = '#F97316'
     ctx.fillRect(0, 0, fillW, h)
-
     this.throwChargeBarFill.update()
   }
 
@@ -346,7 +366,15 @@ export class Player {
       root.scaling = new Vector3(scale, scale, scale)
     }
 
+    this._childMeshes = this.mesh.getChildMeshes()
     this.mesh.position.copyFrom(this.position)
+
+    this.walkAnimGroup = this.animationGroups.find(ag =>
+      ag.name.toLowerCase().includes('walk')
+    ) ?? null
+    this.idleAnimGroup = this.animationGroups.find(ag =>
+      ag.name.toLowerCase().includes('idle')
+    ) ?? null
   }
 
   kick(): void {
@@ -370,7 +398,7 @@ export class Player {
     this.equippedWeapon = weapon
     this.weaponMesh = createWeaponMesh(weapon.type, this.scene)
     this.weaponMesh.parent = this.mesh
-    this.weaponMesh.position = new Vector3(0.4, 1.0, 0.3)
+    this.weaponMesh.position = new Vector3(0.65, 1.0, 0.3)
   }
 
   unequipWeapon(): void {
@@ -398,7 +426,7 @@ export class Player {
       this.swingTime -= delta
       const progress = 1 - (this.swingTime / this.equippedWeapon.swingDuration)
       if (this.weaponMesh) {
-        this.weaponMesh.rotation.x = -Math.PI * 0.8 * Math.sin(progress * Math.PI)
+        this.weaponMesh.rotation.x = Math.PI * 0.8 * Math.sin(progress * Math.PI)
       }
       if (this.swingTime <= 0) {
         this.isSwingingWeapon = false
@@ -467,19 +495,31 @@ export class Player {
   }
 
   private playAnimation(name: string, loop: boolean = true): void {
-    if (this.currentAnimName === name) return
-    this.animationGroups.forEach(ag => ag.stop())
-    this.currentAnimName = name
-    const anim = this.animationGroups.find(ag =>
-      ag.name.toLowerCase().includes(name.toLowerCase())
-    )
-    if (anim) {
-      anim.loopAnimation = loop
-      anim.reset()
-      anim.start()
+    let targetAnim: AnimationGroup | null = null
+    if (name === 'Walk') {
+      targetAnim = this.walkAnimGroup
+    } else if (name === 'Idle') {
+      targetAnim = this.idleAnimGroup
     } else {
-      this.currentAnimName = ''
+      targetAnim = this.animationGroups.find(ag =>
+        ag.name.toLowerCase().includes(name.toLowerCase())
+      ) ?? null
     }
+
+    if (!targetAnim) {
+      this.currentAnimName = ''
+      return
+    }
+
+    if (this.currentAnimName === name && targetAnim.isPlaying) return
+
+    this.animationGroups.forEach(ag => {
+      if (ag.isPlaying) ag.stop()
+    })
+    this.currentAnimName = name
+    targetAnim.loopAnimation = loop
+    targetAnim.reset()
+    targetAnim.start()
   }
 
   update(delta: number): void {
@@ -532,7 +572,7 @@ export class Player {
       this.kickAnimationTime -= delta
       if (this.kickAnimationTime <= 0) {
         this.isKicking = false
-        this.playAnimation('idle')
+        this.playAnimation('Idle')
       }
     }
 
@@ -585,7 +625,7 @@ export class Player {
   }
 
   private setMeshOpacity(opacity: number): void {
-    this.mesh.getChildMeshes().forEach(child => {
+    this._childMeshes.forEach(child => {
       const mat = child.material as PBRMaterial
       if (mat) {
         mat.alpha = opacity
