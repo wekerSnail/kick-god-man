@@ -1,7 +1,7 @@
 <template>
   <div class="ticker" :class="`ticker--${threatLevel}`">
     <!-- 键盘挡脸 -->
-    <div class="ticker__block">
+    <div v-if="potActive" class="ticker__block">
       <span class="ticker__key">键盘</span>
       <span class="ticker__val" :class="potClass">{{ potText }}</span>
     </div>
@@ -33,7 +33,6 @@ import { computed } from 'vue'
 
 const props = defineProps<{
   potActive: boolean
-  potCooldown: number
   potRemainingTime: number
   attackCooldown: number
   comboActive: boolean
@@ -44,11 +43,10 @@ const props = defineProps<{
 
 const potText = computed(() => {
   if (props.potActive) return `挡脸中 ${Math.ceil(props.potRemainingTime)}s`
-  if (props.potCooldown > 0) return `冷却 ${Math.ceil(props.potCooldown)}s`
-  return '就绪 ［空格］'
+  return ''
 })
 const potClass = computed(() =>
-  props.potActive ? 'val--ready' : props.potCooldown > 0 ? 'val--warn' : 'val--ready'
+  props.potActive ? 'val--ready' : ''
 )
 
 const attackText = computed(() => {

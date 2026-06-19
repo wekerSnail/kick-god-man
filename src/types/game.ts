@@ -60,7 +60,7 @@ export interface Prop {
   startTime?: number
 }
 
-export type PropType = 'speed' | 'invisible' | 'noise' | 'combo' | 'mace' | 'bat' | 'frying_pan' | 'ruler'
+export type PropType = 'speed' | 'invisible' | 'noise' | 'combo' | 'mace' | 'bat' | 'frying_pan' | 'ruler' | 'keyboard'
 
 export interface PropConfig {
   type: PropType
@@ -87,7 +87,7 @@ export const PROP_CONFIGS: PropConfig[] = [
     icon: '👟',
     description: '移动速度x2',
     duration: 5000,
-    spawnChance: 0.20,
+    spawnChance: 0.17,
     category: 'consumable'
   },
   {
@@ -96,7 +96,7 @@ export const PROP_CONFIGS: PropConfig[] = [
     icon: '🧪',
     description: '不被发现',
     duration: 5000,
-    spawnChance: 0.20,
+    spawnChance: 0.17,
     category: 'consumable'
   },
   {
@@ -105,7 +105,7 @@ export const PROP_CONFIGS: PropConfig[] = [
     icon: '📢',
     description: '吸引神人注意力',
     duration: 3000,
-    spawnChance: 0.15,
+    spawnChance: 0.13,
     category: 'consumable'
   },
   {
@@ -113,6 +113,15 @@ export const PROP_CONFIGS: PropConfig[] = [
     name: '连击手套',
     icon: '🥊',
     description: '5秒内连续攻击无冷却',
+    duration: 5000,
+    spawnChance: 0.13,
+    category: 'consumable'
+  },
+  {
+    type: 'keyboard',
+    name: '键盘',
+    icon: '⌨️',
+    description: '挡脸防御，被发现只受一半伤害，使用后消耗',
     duration: 5000,
     spawnChance: 0.15,
     category: 'consumable'
@@ -130,7 +139,7 @@ export const WEAPON_CONFIGS: WeaponConfig[] = [
     stunDuration: 3,
     swingDuration: 0.4,
     swingRange: 2.5,
-    spawnChance: 0.12,
+    spawnChance: 0.10,
     duration: 0
   },
   {
@@ -143,7 +152,7 @@ export const WEAPON_CONFIGS: WeaponConfig[] = [
     stunDuration: 2,
     swingDuration: 0.35,
     swingRange: 2.8,
-    spawnChance: 0.10,
+    spawnChance: 0.08,
     duration: 0
   },
   {
@@ -169,7 +178,7 @@ export const WEAPON_CONFIGS: WeaponConfig[] = [
     stunDuration: 1,
     swingDuration: 0.2,
     swingRange: 2.2,
-    spawnChance: 0.03,
+    spawnChance: 0.02,
     duration: 0
   }
 ]

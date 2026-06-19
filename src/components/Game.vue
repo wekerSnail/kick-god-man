@@ -34,7 +34,6 @@
     <StatusTicker
       v-if="gameStarted"
       :pot-active="gameState.potActive"
-      :pot-cooldown="gameState.potCooldown"
       :pot-remaining-time="gameState.potRemainingTime"
       :attack-cooldown="gameState.attackCooldown"
       :combo-active="gameState.comboActive"
@@ -214,7 +213,7 @@ const startEasterEgg = () => {
 }
 
 const handleKeyDown = (e: KeyboardEvent) => {
-  if (e.key === '1' || e.key === '2' || e.key === '3') {
+  if (['1','2','3','4','5','6'].includes(e.key)) {
     if (gameState.value.isEasterEgg) {
       const weapons = gameState.value.easterEggWeapons
       const idx = parseInt(e.key) - 1

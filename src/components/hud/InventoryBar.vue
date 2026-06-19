@@ -50,7 +50,7 @@ const props = defineProps<{
 }>()
 
 const slots = computed<(InventorySlot | null)[]>(() =>
-  [0, 1, 2].map((i) => props.inventory[i] ?? null)
+  [0, 1, 2, 3, 4, 5].map((i) => props.inventory[i] ?? null)
 )
 
 const hint = computed(() => {
@@ -59,7 +59,8 @@ const hint = computed(() => {
   if (w && (w.type === 'mace' || w.type === 'bat'))
     return `装备中：${w.name}　左击挥砍 / 右键蓄力掷出`
   if (w) return `装备中：${w.name}　点击挥砍`
-  return '鼠标左键 — 踹击'
+  const hasKeyboard = props.inventory.some(i => i.type === 'keyboard')
+  return hasKeyboard ? '鼠标左键 — 键盘挡脸' : '鼠标左键 — 踹击'
 })
 
 // emoji 图标，更直观有趣
@@ -72,6 +73,7 @@ const ICON_MAP: Record<string, { char: string; accent: string }> = {
   bat: { char: '⚾', accent: 'var(--amber)' },
   frying_pan: { char: '🍳', accent: 'var(--ink-soft)' },
   ruler: { char: '📏', accent: 'var(--mint)' },
+  keyboard: { char: '⌨️', accent: 'var(--lavender)' },
 }
 const iconCharOf = (t: string) => ICON_MAP[t]?.char ?? '❓'
 const accentOf = (t: string) => ICON_MAP[t]?.accent ?? 'var(--ink)'

@@ -28,7 +28,6 @@ export class Player {
   private kickCooldownMax: number = 5.0
   private isKicking: boolean = false
   private kickAnimationTime: number = 0
-  private potCooldown: number = 0
   private potActive: boolean = false
   private potStartTime: number = 0
   private comboActive: boolean = false
@@ -61,13 +60,15 @@ export class Player {
   private potCooldownBarBg: TransformNode | null = null
   private potCooldownBarFill: DynamicTexture | null = null
   private potCooldownBarMeshes: TransformNode[] = []
-  private potCooldownMax: number = 5.0
 
   private throwChargeBarBg: TransformNode | null = null
   private throwChargeBarFill: DynamicTexture | null = null
   private throwChargeBarMeshes: TransformNode[] = []
 
   private keyboardShield: TransformNode | null = null
+  private keyboardShieldLoaded = false
+  private equippedKeyboard: boolean = false
+  private _keyboardConsumed: boolean = false
   private assetManager: AssetManager | null = null
   // 复用方向向量，避免每帧 new（P0.3）
   private _moveDir = Vector3.Zero()
@@ -99,7 +100,6 @@ export class Player {
     this.createCooldownBar()
     this.createPotCooldownBar()
     this.createThrowChargeBar()
-    this.loadKeyboardShield()
   }
 
   setCollisionSystem(cs: CollisionSystem): void {
@@ -310,22 +310,28 @@ export class Player {
     this.throwChargeBarFill.update()
   }
 
-  private async loadKeyboardShield(): Promise<void> {
-    if (!this.assetManager) return
+  private async ensureKeyboardShield(): Promise<void> {
+    if (!this.keyboardShield) {
+      this.keyboardShield = new TransformNode('keyboardShield', this.scene)
+      this.keyboardShield.parent = this.mesh
+      if (!this.keyboardShieldLoaded && this.assetManager) {
+        const keyboard = await this.assetManager.loadProp('playerKeyboard', keyboardUrl)
+        keyboard.parent = this.keyboardShield
+        keyboard.scaling = new Vector3(0.5, 0.5, 0.5)
+        this.keyboardShieldLoaded = true
+      }
+    }
+    this.keyboardShield.setEnabled(true)
+  }
 
-    this.keyboardShield = new TransformNode('keyboardShield', this.scene)
-    this.keyboardShield.parent = this.mesh
-    this.keyboardShield.position = new Vector3(-0.4, 1.0, 0.3)
-    this.keyboardShield.rotation.x = -Math.PI / 6
-    this.keyboardShield.rotation.z = Math.PI / 8
-
-    const keyboard = await this.assetManager.loadProp('playerKeyboard', keyboardUrl)
-    keyboard.parent = this.keyboardShield
-    keyboard.scaling = new Vector3(0.5, 0.5, 0.5)
+  private hideKeyboardShield(): void {
+    if (this.keyboardShield) {
+      this.keyboardShield.setEnabled(false)
+    }
   }
 
   private updateKeyboardPosition(): void {
-    if (!this.keyboardShield) return
+    if (!this.keyboardShield || !this.keyboardShield.isEnabled()) return
 
     if (this.potActive) {
       const targetY = 1.6
@@ -334,7 +340,7 @@ export class Player {
       this.keyboardShield.position.z += (targetZ - this.keyboardShield.position.z) * 0.2
       this.keyboardShield.rotation.x = -Math.PI / 2
       this.keyboardShield.rotation.z = 0
-    } else {
+    } else if (this.equippedKeyboard) {
       const targetY = 1.0
       const targetZ = 0.3
       this.keyboardShield.position.y += (targetY - this.keyboardShield.position.y) * 0.2
@@ -385,10 +391,10 @@ export class Player {
 
   kick(): void {
     const noCooldown = this.comboActive
-    if (!noCooldown && (this.kickCooldown > 0 || this.isKicking || this.potActive)) {
+    if (!noCooldown && (this.kickCooldown > 0 || this.isKicking)) {
       return
     }
-    if (this.isKicking || this.potActive) return
+    if (this.isKicking) return
     if (this.equippedWeapon) {
       this.swingWeapon()
       return
@@ -494,10 +500,38 @@ export class Player {
     ).normalize()
   }
 
-  private usePot(): void {
-    if (this.potCooldown > 0 || this.potActive) return
+  async equipKeyboard(): Promise<void> {
+    this.equippedKeyboard = true
+    await this.ensureKeyboardShield()
+    if (this.keyboardShield) {
+      this.keyboardShield.position = new Vector3(-0.4, 1.0, 0.3)
+      this.keyboardShield.rotation.x = -Math.PI / 6
+      this.keyboardShield.rotation.z = Math.PI / 8
+    }
+  }
+
+  unequipKeyboard(): void {
+    this.equippedKeyboard = false
+    this.potActive = false
+    this.hideKeyboardShield()
+  }
+
+  isKeyboardEquipped(): boolean {
+    return this.equippedKeyboard
+  }
+
+  isKeyboardConsumed(): boolean {
+    if (this._keyboardConsumed) {
+      this._keyboardConsumed = false
+      return true
+    }
+    return false
+  }
+
+  activateBlock(duration: number = 5.0): void {
+    if (this.potActive || !this.equippedKeyboard) return
     this.potActive = true
-    this.potStartTime = 5.0
+    this.potStartTime = duration
   }
 
   private playAnimation(name: string, loop: boolean = true): void {
@@ -573,10 +607,6 @@ export class Player {
 
     this.updateInvisible(delta)
 
-    if (this.input.isActionJustPressed('usePot')) {
-      this.usePot()
-    }
-
     if (this.kickCooldown > 0) {
       this.kickCooldown -= delta
     }
@@ -593,19 +623,17 @@ export class Player {
       this.potStartTime -= delta
       if (this.potStartTime <= 0) {
         this.potActive = false
-        this.potCooldown = 5.0
+        this.equippedKeyboard = false
+        this._keyboardConsumed = true
+        this.hideKeyboardShield()
       }
-    }
-
-    if (this.potCooldown > 0) {
-      this.potCooldown -= delta
     }
 
     const maxCooldown = Math.max(this.kickCooldown, this.swingCooldown)
     const progress = maxCooldown > 0 ? maxCooldown / this.kickCooldownMax : 0
     this.updateCooldownBarVisual(progress)
 
-    const potProgress = this.potCooldown > 0 ? this.potCooldown / this.potCooldownMax : 0
+    const potProgress = 0
     this.updatePotCooldownBarVisual(potProgress)
 
     const throwProgress = this.isChargingThrow ? (Math.sin(this.throwChargeTime * Math.PI * 2) + 1) / 2 : 0
@@ -671,7 +699,7 @@ export class Player {
   }
 
   getPotCooldown(): number {
-    return this.potCooldown
+    return 0
   }
 
   getPotRemainingTime(): number {

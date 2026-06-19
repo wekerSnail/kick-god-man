@@ -4,10 +4,12 @@ export type Action =
   | 'moveLeft'
   | 'moveRight'
   | 'kick'
-  | 'usePot'
   | 'useProp1'
   | 'useProp2'
   | 'useProp3'
+  | 'useProp4'
+  | 'useProp5'
+  | 'useProp6'
   | 'throwWeapon'
 
 export class InputManager {
@@ -21,10 +23,12 @@ export class InputManager {
     this.bind('KeyS', 'moveBackward')
     this.bind('KeyA', 'moveLeft')
     this.bind('KeyD', 'moveRight')
-    this.bind('Space', 'usePot')
     this.bind('Digit1', 'useProp1')
     this.bind('Digit2', 'useProp2')
     this.bind('Digit3', 'useProp3')
+    this.bind('Digit4', 'useProp4')
+    this.bind('Digit5', 'useProp5')
+    this.bind('Digit6', 'useProp6')
 
     this.setupListeners()
   }

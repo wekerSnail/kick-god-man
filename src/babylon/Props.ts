@@ -28,7 +28,7 @@ export class Props {
   private props: PropItem[] = []
   private spawnInterval: number = 10
   private spawnTimer: number = 0
-  private maxProps: number = 3
+  private maxProps: number = 5
   private _animTime: number = 0
 
   constructor(scene: Scene) {

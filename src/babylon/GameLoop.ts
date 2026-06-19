@@ -18,7 +18,7 @@ import { LevelManager } from './systems/LevelManager'
 import { AudioManager } from './systems/AudioManager'
 import { ProjectileSystem } from './systems/ProjectileSystem'
 import { Props } from './Props'
-import { WEAPON_CONFIGS, EASTER_EGG_WEAPONS } from '../types/game'
+import { WEAPON_CONFIGS, PROP_CONFIGS, EASTER_EGG_WEAPONS } from '../types/game'
 import type { EasterEggWeaponType } from '../types/game'
 import { EasterEggMode } from './easter-egg/EasterEggMode'
 
@@ -123,23 +123,17 @@ export class GameLoop {
     this.player.setCollisionSystem(this.collisionSystem)
     this.enemy.setCollisionSystem(this.collisionSystem)
 
-    // 左键踢击，直接监听 canvas（P4.2 修复：去掉 setTimeout + document）
+    // 左键：键盘已装备则挡脸，否则踹击
     this._clickHandler = (e: PointerEvent) => {
-      if (e.button === 0) this.player.kick()
+      if (e.button === 0) {
+        if (this.player.isKeyboardEquipped()) {
+          this.player.activateBlock(5.0)
+        } else {
+          this.player.kick()
+        }
+      }
     }
     this.canvas!.addEventListener('pointerdown', this._clickHandler as EventListener)
-
-    this.inventory.push({
-      id: 'starter-mace',
-      type: 'mace',
-      name: '狼牙棒',
-      icon: '鎚',
-      description: '击中算5次，造成眩晕3秒',
-      duration: 0,
-      active: false,
-      category: 'weapon',
-      count: 1
-    })
 
   }
 
@@ -404,8 +398,9 @@ export class GameLoop {
     }
 
     const pickedUp = this.props.update(delta, this.player.getPosition())
-    if (pickedUp) {
-      const config = WEAPON_CONFIGS.find(c => c.type === pickedUp.type)
+    if (pickedUp && this.inventory.length < 6) {
+      const allConfigs = [...PROP_CONFIGS, ...WEAPON_CONFIGS]
+      const config = allConfigs.find(c => c.type === pickedUp.type)
       this.inventory.push({
         id: pickedUp.id,
         type: pickedUp.type,
@@ -417,6 +412,13 @@ export class GameLoop {
         category: pickedUp.category,
         count: 1
       })
+    }
+
+    if (this.player.isKeyboardConsumed()) {
+      const kbIndex = this.inventory.findIndex(item => item.type === 'keyboard')
+      if (kbIndex !== -1) {
+        this.inventory.splice(kbIndex, 1)
+      }
     }
 
     this.updateInventory(delta)
@@ -546,12 +548,17 @@ export class GameLoop {
       if (prop.category === 'weapon') {
         const weaponConfig = WEAPON_CONFIGS.find(w => w.type === prop.type)
         if (weaponConfig) {
+          this.player.unequipKeyboard()
           this.player.equipWeapon(weaponConfig)
           prop.count--
           if (prop.count <= 0) {
             this.inventory.splice(index, 1)
           }
         }
+      } else if (prop.type === 'keyboard') {
+        this.player.unequipWeapon()
+        this.player.equipKeyboard()
+        return
       } else if (!prop.active) {
         prop.active = true
         prop.startTime = Date.now()
