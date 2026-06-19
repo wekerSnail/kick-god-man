@@ -8,7 +8,7 @@ import {
   ShadowGenerator
 } from '@babylonjs/core'
 import type { AssetManager } from '../core/AssetManager'
-import type { HidingSpot } from '../../types/game'
+import type { HidingSpot, AABB } from '../../types/game'
 import { HIDING_SPOTS } from '../../types/game'
 
 import pottedPlantUrl from '../../assets/kenney_furniture-kit/Models/GLTF format/pottedPlant.glb?url'
@@ -24,6 +24,7 @@ export class HidingSpots {
   private shadowGen: ShadowGenerator
   private assetManager: AssetManager
   private spots: { config: HidingSpot; mesh: TransformNode }[] = []
+  private colliders: AABB[] = []
 
   constructor(
     scene: Scene,
@@ -39,6 +40,7 @@ export class HidingSpots {
   private async createHidingSpots(): Promise<void> {
     for (const config of HIDING_SPOTS) {
       const parent = new TransformNode(`hide_${config.id}`, this.scene)
+      parent.position = new Vector3(config.position.x, config.position.y, config.position.z)
       switch (config.id) {
         case 'plant':
           await this.createPlant(parent)
@@ -50,8 +52,16 @@ export class HidingSpots {
           await this.createSofa(parent)
           break
       }
-      parent.position = new Vector3(config.position.x, config.position.y, config.position.z)
       this.spots.push({ config, mesh: parent })
+
+      const halfW = config.size.x / 2
+      const halfD = config.size.z / 2
+      this.colliders.push({
+        minX: config.position.x - halfW,
+        maxX: config.position.x + halfW,
+        minZ: config.position.z - halfD,
+        maxZ: config.position.z + halfD
+      })
     }
   }
 
@@ -229,6 +239,10 @@ export class HidingSpots {
 
   getSpots(): { config: HidingSpot; mesh: TransformNode }[] {
     return this.spots
+  }
+
+  getColliders(): AABB[] {
+    return this.colliders
   }
 
   dispose(): void {

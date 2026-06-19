@@ -12,6 +12,7 @@ import {
 } from '@babylonjs/core'
 import type { InputManager } from '../core/InputManager'
 import type { AssetManager } from '../core/AssetManager'
+import type { CollisionSystem } from '../systems/CollisionSystem'
 import type { WeaponConfig } from '../../types/game'
 import { createWeaponMesh } from '../weapons/WeaponModels'
 
@@ -72,6 +73,7 @@ export class Player {
   private _moveDir = Vector3.Zero()
   // 缓存子网格列表，避免每帧 getChildMeshes() 分配数组
   private _childMeshes: AbstractMesh[] = []
+  private collisionSystem: CollisionSystem | null = null
   // 进度条纹理缓存值，量化到 1%，避免每帧 GPU 上传（P2.1）
   private _lastCooldownPct: number = -1
   private _lastPotPct: number = -1
@@ -98,6 +100,10 @@ export class Player {
     this.createPotCooldownBar()
     this.createThrowChargeBar()
     this.loadKeyboardShield()
+  }
+
+  setCollisionSystem(cs: CollisionSystem): void {
+    this.collisionSystem = cs
   }
 
   private createPotCooldownBar(): void {
@@ -534,12 +540,19 @@ export class Player {
 
     if (this.isMoving) {
       this._moveDir.normalize()
-      // 复用 _moveDir 避免 scaleInPlace 创建新对象
-      this.position.x += this._moveDir.x * this.speed * delta
-      this.position.y += this._moveDir.y * this.speed * delta
-      this.position.z += this._moveDir.z * this.speed * delta
-      this.position.x = Math.max(-9, Math.min(9, this.position.x))
-      this.position.z = Math.max(-9, Math.min(9, this.position.z))
+      const newX = this.position.x + this._moveDir.x * this.speed * delta
+      const newZ = this.position.z + this._moveDir.z * this.speed * delta
+      const clampedX = Math.max(-9, Math.min(9, newX))
+      const clampedZ = Math.max(-9, Math.min(9, newZ))
+
+      if (this.collisionSystem) {
+        const result = this.collisionSystem.slideMove(this.position.x, this.position.z, clampedX, clampedZ, 0.4)
+        this.position.x = result.x
+        this.position.z = result.z
+      } else {
+        this.position.x = clampedX
+        this.position.z = clampedZ
+      }
       this.targetRotation = Math.atan2(this._moveDir.x, this._moveDir.z)
     }
 

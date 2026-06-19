@@ -13,6 +13,7 @@ import {
 import type { AssetManager } from '../core/AssetManager'
 import { StateMachine } from '../core/StateMachine'
 import { NormalState, AttackedState } from '../state/EnemyStates'
+import type { CollisionSystem } from '../systems/CollisionSystem'
 
 const characterModelUrl = new URL('/models/characters/boss.glb', import.meta.url).href
 
@@ -33,6 +34,7 @@ export class Enemy {
   private currentAnimName: string = ''
   private walkAnimGroup: AnimationGroup | null = null
   private idleAnimGroup: AnimationGroup | null = null
+  private collisionSystem: CollisionSystem | null = null
 
   private stateMachine: StateMachine<Enemy>
   private _nextLookBackTime: number = 8
@@ -79,6 +81,10 @@ export class Enemy {
 
     this.loadModel(assetManager)
     this.setupPatrolWaypoints()
+  }
+
+  setCollisionSystem(cs: CollisionSystem): void {
+    this.collisionSystem = cs
   }
 
   private async loadModel(assetManager: AssetManager): Promise<void> {
@@ -448,9 +454,19 @@ export class Enemy {
       0,
       Math.cos(this.mesh.rotation.y)
     )
-    this.position.addInPlace(moveDir.scaleInPlace(speed * dt))
-    this.position.x = Math.max(-9, Math.min(9, this.position.x))
-    this.position.z = Math.max(-9, Math.min(9, this.position.z))
+    const newX = this.position.x + moveDir.x * speed * dt
+    const newZ = this.position.z + moveDir.z * speed * dt
+    const clampedX = Math.max(-9, Math.min(9, newX))
+    const clampedZ = Math.max(-9, Math.min(9, newZ))
+
+    if (this.collisionSystem) {
+      const result = this.collisionSystem.slideMove(this.position.x, this.position.z, clampedX, clampedZ, 0.4)
+      this.position.x = result.x
+      this.position.z = result.z
+    } else {
+      this.position.x = clampedX
+      this.position.z = clampedZ
+    }
     this.mesh.position.copyFrom(this.position)
 
     return false
@@ -471,7 +487,17 @@ export class Enemy {
 
     this.isWalking = true
     Enemy._tmpReturnDir.normalize()
-    this.position.addInPlace(Enemy._tmpReturnDir.scaleInPlace(speed * dt))
+    const newX = this.position.x + Enemy._tmpReturnDir.x * speed * dt
+    const newZ = this.position.z + Enemy._tmpReturnDir.z * speed * dt
+
+    if (this.collisionSystem) {
+      const result = this.collisionSystem.slideMove(this.position.x, this.position.z, newX, newZ, 0.4)
+      this.position.x = result.x
+      this.position.z = result.z
+    } else {
+      this.position.x = newX
+      this.position.z = newZ
+    }
     this.mesh.position.copyFrom(this.position)
 
     const targetRotation = Math.atan2(Enemy._tmpReturnDir.x, Enemy._tmpReturnDir.z)

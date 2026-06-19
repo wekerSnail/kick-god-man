@@ -2,16 +2,22 @@ import { Vector3 } from '@babylonjs/core'
 import type { Player } from '../entities/Player'
 import type { Enemy } from '../entities/Enemy'
 import type { HidingSpots } from '../environment/HidingSpots'
+import type { OfficeLevel } from '../environment/OfficeLevel'
+import type { AABB } from '../../types/game'
 
 export class CollisionSystem {
   private static readonly _tmpForward = new Vector3()
   private static readonly _tmpToPlayer = new Vector3()
+  private officeLevel: OfficeLevel | null = null
 
   constructor(
     private player: Player,
     private enemy: Enemy,
-    private hidingSpots: HidingSpots
-  ) {}
+    private hidingSpots: HidingSpots,
+    officeLevel?: OfficeLevel
+  ) {
+    this.officeLevel = officeLevel ?? null
+  }
 
   checkEnemyDetection(): boolean {
     if (this.enemy.isPatrolling()) {
@@ -54,5 +60,34 @@ export class CollisionSystem {
     const halfAngle = 40 * Math.PI / 180
 
     return dot > Math.cos(halfAngle)
+  }
+
+  checkFurnitureCollision(px: number, pz: number, radius: number): boolean {
+    const colliders: AABB[] = []
+    if (this.officeLevel) colliders.push(...this.officeLevel.getColliders())
+    colliders.push(...this.hidingSpots.getColliders())
+    for (const c of colliders) {
+      const closestX = Math.max(c.minX, Math.min(px, c.maxX))
+      const closestZ = Math.max(c.minZ, Math.min(pz, c.maxZ))
+      const dx = px - closestX
+      const dz = pz - closestZ
+      if (dx * dx + dz * dz < radius * radius) {
+        return true
+      }
+    }
+    return false
+  }
+
+  slideMove(oldX: number, oldZ: number, newX: number, newZ: number, radius: number): { x: number; z: number } {
+    if (!this.checkFurnitureCollision(newX, newZ, radius)) {
+      return { x: newX, z: newZ }
+    }
+    if (!this.checkFurnitureCollision(newX, oldZ, radius)) {
+      return { x: newX, z: oldZ }
+    }
+    if (!this.checkFurnitureCollision(oldX, newZ, radius)) {
+      return { x: oldX, z: newZ }
+    }
+    return { x: oldX, z: oldZ }
   }
 }

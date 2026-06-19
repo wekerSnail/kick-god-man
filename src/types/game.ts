@@ -4,6 +4,13 @@ export interface Vec3 {
   z: number
 }
 
+export interface AABB {
+  minX: number
+  maxX: number
+  minZ: number
+  maxZ: number
+}
+
 export interface UIState {
   kickCount: number
   health: number
@@ -189,7 +196,7 @@ export const HIDING_SPOTS: HidingSpot[] = [
   },
   {
     id: 'sofa',
-    position: { x: -4, y: 0, z: -2 },
+    position: { x: -6, y: 0, z: 0 },
     size: { x: 4, y: 1, z: 2 },
     name: '沙发'
   }

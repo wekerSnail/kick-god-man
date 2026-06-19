@@ -116,8 +116,12 @@ export class GameLoop {
     this.collisionSystem = new CollisionSystem(
       this.player,
       this.enemy,
-      this.hidingSpots
+      this.hidingSpots,
+      this.officeLevel
     )
+
+    this.player.setCollisionSystem(this.collisionSystem)
+    this.enemy.setCollisionSystem(this.collisionSystem)
 
     // 左键踢击，直接监听 canvas（P4.2 修复：去掉 setTimeout + document）
     this._clickHandler = (e: PointerEvent) => {

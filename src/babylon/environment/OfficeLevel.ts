@@ -8,11 +8,11 @@ import {
   TransformNode
 } from '@babylonjs/core'
 import type { AssetManager } from '../core/AssetManager'
+import type { AABB } from '../../types/game'
 
 import deskUrl from '../../assets/kenney_furniture-kit/Models/GLTF format/desk.glb?url'
 import chairUrl from '../../assets/kenney_furniture-kit/Models/GLTF format/chair.glb?url'
 import plantSmall1Url from '../../assets/kenney_furniture-kit/Models/GLTF format/plantSmall1.glb?url'
-import bookcaseClosedUrl from '../../assets/kenney_furniture-kit/Models/GLTF format/bookcaseClosed.glb?url'
 import lampSquareCeilingUrl from '../../assets/kenney_furniture-kit/Models/GLTF format/lampSquareCeiling.glb?url'
 import rugRectangleUrl from '../../assets/kenney_furniture-kit/Models/GLTF format/rugRectangle.glb?url'
 
@@ -29,6 +29,7 @@ export class OfficeLevel {
   private assetManager: AssetManager
   private furniture: TransformNode
   private groundMats: PBRMaterial[] = []
+  private colliders: AABB[] = []
 
   constructor(scene: Scene, shadowGen: ShadowGenerator, assetManager: AssetManager) {
     this.scene = scene
@@ -123,7 +124,8 @@ export class OfficeLevel {
     parent: TransformNode,
     position: Vector3,
     rotationY: number,
-    targetHeight: number
+    targetHeight: number,
+    addCollider: boolean = false
   ): boolean {
     const childMeshes = prop.getChildMeshes()
     if (childMeshes.length === 0) return false
@@ -154,6 +156,10 @@ export class OfficeLevel {
     prop.position = new Vector3(position.x - centerX * scale, -minY * scale, position.z - centerZ * scale)
     prop.rotation.y = rotationY
 
+    if (addCollider) {
+      this.addColliderFromNode(prop)
+    }
+
     childMeshes.forEach(m => {
       m.receiveShadows = true
       // 仅较大物体投射阴影，小装饰跳过（P3.2 优化）
@@ -166,6 +172,37 @@ export class OfficeLevel {
     return true
   }
 
+  private addColliderFromNode(node: TransformNode): void {
+    const childMeshes = node.getChildMeshes()
+    if (childMeshes.length === 0) return
+    let minX = Infinity, maxX = -Infinity
+    let minZ = Infinity, maxZ = -Infinity
+    childMeshes.forEach(m => {
+      m.computeWorldMatrix(true)
+      const bi = m.getBoundingInfo()
+      minX = Math.min(minX, bi.boundingBox.minimumWorld.x)
+      maxX = Math.max(maxX, bi.boundingBox.maximumWorld.x)
+      minZ = Math.min(minZ, bi.boundingBox.minimumWorld.z)
+      maxZ = Math.max(maxZ, bi.boundingBox.maximumWorld.z)
+    })
+    if (minX < maxX && minZ < maxZ) {
+      this.colliders.push({ minX, maxX, minZ, maxZ })
+    }
+  }
+
+  private addColliderBox(cx: number, cz: number, halfW: number, halfD: number): void {
+    this.colliders.push({
+      minX: cx - halfW,
+      maxX: cx + halfW,
+      minZ: cz - halfD,
+      maxZ: cz + halfD
+    })
+  }
+
+  getColliders(): AABB[] {
+    return this.colliders
+  }
+
   private async createEnemyDesk(): Promise<void> {
     const deskParent = new TransformNode('enemyDesk', this.scene)
     deskParent.parent = this.furniture
@@ -175,12 +212,14 @@ export class OfficeLevel {
     if (!deskPlaced) {
       this.fallbackDesk(deskParent, new Vector3(0, 0, -7))
     }
+    this.addColliderBox(0, -7, 1.2, 0.7)
 
     const chair = await this.assetManager.loadProp('chair', chairUrl)
-    const chairPlaced = this.placeProp(chair, deskParent, new Vector3(0, 0, -5.8), Math.PI, 1.4)
+    const chairPlaced = this.placeProp(chair, deskParent, new Vector3(-2, 0, -5), Math.PI, 1.4)
     if (!chairPlaced) {
-      this.fallbackChair(deskParent, new Vector3(0, 0, -5.8))
+      this.fallbackChair(deskParent, new Vector3(-2, 0, -5))
     }
+    this.addColliderBox(-2, -5, 0.3, 0.3)
 
     const screen = await this.assetManager.loadProp('computerScreen', computerUrl)
     const screenPlaced = this.placeProp(screen, deskParent, new Vector3(0, 0, -7.5), Math.PI, 0.5)
@@ -204,12 +243,6 @@ export class OfficeLevel {
     const deskPlantPlaced = this.placeProp(deskPlant, deskParent, new Vector3(0.8, 0, -7.3), 0, 0.35)
     if (deskPlantPlaced) {
       deskPlant.position.y += 1.25
-    }
-
-    const bookcase = await this.assetManager.loadProp('bookcaseClosed', bookcaseClosedUrl)
-    const bookcasePlaced = this.placeProp(bookcase, deskParent, new Vector3(5, 0, -9.2), 0, 2.2)
-    if (!bookcasePlaced) {
-      this.fallbackBookcase(deskParent, new Vector3(5, 0, -9.2))
     }
 
     const lamp = await this.assetManager.loadProp('lampSquareCeiling', lampSquareCeilingUrl)
@@ -305,6 +338,8 @@ export class OfficeLevel {
     headboard.parent = bedParent
     headboard.material = frameMat
     headboard.freezeWorldMatrix()
+
+    this.addColliderBox(-6, -7, 1.0, 1.4)
   }
 
   private createSofa(): void {
@@ -315,24 +350,21 @@ export class OfficeLevel {
     sofaMat.albedoColor = Color3.FromHexString('#5B8C5A')
     sofaMat.roughness = 0.8
 
-    // 座垫
     const seat = MeshBuilder.CreateBox('sofaSeat', {
       width: 2.4, height: 0.4, depth: 0.9
     }, this.scene)
-    seat.position = new Vector3(-4, 0.3, -2)
+    seat.position = new Vector3(2, 0.3, -2)
     seat.parent = sofaParent
     seat.material = sofaMat
     seat.receiveShadows = true
 
-    // 靠背
     const back = MeshBuilder.CreateBox('sofaBack', {
       width: 2.4, height: 0.6, depth: 0.15
     }, this.scene)
-    back.position = new Vector3(-4, 0.7, -2.4)
+    back.position = new Vector3(2, 0.7, -2.4)
     back.parent = sofaParent
     back.material = sofaMat
 
-    // 扶手
     const armMat = new PBRMaterial('sofaArmMat', this.scene)
     armMat.albedoColor = Color3.FromHexString('#4A7A49')
     armMat.roughness = 0.8
@@ -340,18 +372,17 @@ export class OfficeLevel {
     const armL = MeshBuilder.CreateBox('sofaArmL', {
       width: 0.15, height: 0.5, depth: 0.9
     }, this.scene)
-    armL.position = new Vector3(-5.1, 0.45, -2)
+    armL.position = new Vector3(0.9, 0.45, -2)
     armL.parent = sofaParent
     armL.material = armMat
 
     const armR = MeshBuilder.CreateBox('sofaArmR', {
       width: 0.15, height: 0.5, depth: 0.9
     }, this.scene)
-    armR.position = new Vector3(-2.9, 0.45, -2)
+    armR.position = new Vector3(3.1, 0.45, -2)
     armR.parent = sofaParent
     armR.material = armMat
 
-    // 靠枕
     const cushionMat = new PBRMaterial('cushionMat', this.scene)
     cushionMat.albedoColor = Color3.FromHexString('#F39C12')
     cushionMat.roughness = 0.9
@@ -360,7 +391,7 @@ export class OfficeLevel {
       const cushion = MeshBuilder.CreateBox(`sofaCushion_${i}`, {
         width: 0.4, height: 0.4, depth: 0.15
       }, this.scene)
-      cushion.position = new Vector3(-4.5 + i * 1.0, 0.7, -2.35)
+      cushion.position = new Vector3(1.5 + i * 1.0, 0.7, -2.35)
       cushion.parent = sofaParent
       cushion.material = cushionMat
     }
@@ -369,6 +400,8 @@ export class OfficeLevel {
     armMat.freeze()
     cushionMat.freeze()
     sofaParent.getChildMeshes().forEach(m => m.freezeWorldMatrix())
+
+    this.addColliderBox(2, -2, 1.2, 0.5)
   }
 
   private createWindow(): void {
@@ -488,7 +521,7 @@ export class OfficeLevel {
     plantParent.parent = this.furniture
 
     const plant = await this.assetManager.loadProp('floorPlant_' + pos.x, plantSmall1Url)
-    const placed = this.placeProp(plant, plantParent, pos, 0, 0.8)
+    const placed = this.placeProp(plant, plantParent, pos, 0, 0.8, true)
     if (!placed) {
       // 回退：简单绿色球体
       const potMat = new PBRMaterial('potMat_' + pos.x, this.scene)
@@ -514,6 +547,8 @@ export class OfficeLevel {
       leaves.material = leafMat
       leaves.freezeWorldMatrix()
       leafMat.freeze()
+
+      this.addColliderBox(pos.x, pos.z, 0.3, 0.3)
     }
   }
 
@@ -552,6 +587,8 @@ export class OfficeLevel {
       leg.freezeWorldMatrix()
     })
     deskMat.freeze()
+
+    this.addColliderBox(pos.x, pos.z, 1.2, 0.7)
   }
 
   private fallbackChair(parent: TransformNode, pos: Vector3): void {
@@ -573,6 +610,8 @@ export class OfficeLevel {
     back.material = mat
     back.freezeWorldMatrix()
     mat.freeze()
+
+    this.addColliderBox(pos.x, pos.z, 0.275, 0.275)
   }
 
   private fallbackScreen(parent: TransformNode, pos: Vector3): void {
@@ -613,22 +652,6 @@ export class OfficeLevel {
     kb.parent = parent
     kb.material = mat
     kb.freezeWorldMatrix()
-    mat.freeze()
-  }
-
-  private fallbackBookcase(parent: TransformNode, pos: Vector3): void {
-    const mat = new PBRMaterial('fallbackBookcaseMat', this.scene)
-    mat.albedoColor = Color3.FromHexString('#C4A06A')
-    mat.roughness = 0.7
-    const body = MeshBuilder.CreateBox('fallbackBookcase', {
-      width: 1.4, height: 2.2, depth: 0.4
-    }, this.scene)
-    body.position = new Vector3(pos.x, 1.1, pos.z)
-    body.parent = parent
-    body.material = mat
-    body.receiveShadows = true
-    this.shadowGen.addShadowCaster(body)
-    body.freezeWorldMatrix()
     mat.freeze()
   }
 
