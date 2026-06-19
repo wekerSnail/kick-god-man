@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Mimocode (development tool)
+.mimocode/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

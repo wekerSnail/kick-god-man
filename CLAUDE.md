@@ -21,7 +21,7 @@ pnpm preview          # Preview production build
 
 ### Active Engine: `src/babylon/`
 
-The game uses **Babylon.js 9** (`@babylonjs/core` + `@babylonjs/loaders`). The `src/game/` directory is **dead code** (old Three.js version) — do not edit or reference it.
+The game uses **Babylon.js 9** (`@babylonjs/core` + `@babylonjs/loaders`). The old Three.js code (`src/game/`) has been fully removed.
 
 ### Key Files
 
@@ -37,7 +37,10 @@ The game uses **Babylon.js 9** (`@babylonjs/core` + `@babylonjs/loaders`). The `
 | `src/babylon/core/AssetManager.ts` | GLB model loading and caching |
 | `src/babylon/core/InputManager.ts` | Keyboard/mouse → abstract actions |
 | `src/babylon/systems/ProjectileSystem.ts` | Thrown weapon physics |
+| `src/babylon/Props.ts` | Prop spawning, pickup, and floating animation |
 | `src/babylon/weapons/WeaponModels.ts` | Procedural 3D weapon meshes |
+| `src/babylon/core/StateMachine.ts` | Generic FSM (used by Enemy states) |
+| `src/styles/theme.css` | Design tokens (昭和 Office 怪谈 visual system) |
 | `src/babylon/easter-egg/EasterEggMode.ts` | Easter egg mode controller (30s FPS shooting minigame) |
 | `src/babylon/easter-egg/EasterEggWeapons.ts` | Easter egg weapon system (gun/rocket/grenade) |
 | `src/babylon/easter-egg/EasterEggBoss.ts` | Boss behavior in easter egg mode |
