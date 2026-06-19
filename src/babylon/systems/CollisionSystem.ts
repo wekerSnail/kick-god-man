@@ -4,6 +4,9 @@ import type { Enemy } from '../entities/Enemy'
 import type { HidingSpots } from '../environment/HidingSpots'
 
 export class CollisionSystem {
+  private static readonly _tmpForward = new Vector3()
+  private static readonly _tmpToPlayer = new Vector3()
+
   constructor(
     private player: Player,
     private enemy: Enemy,
@@ -40,9 +43,12 @@ export class CollisionSystem {
     if (distance > 7) return false
 
     const angle = this.enemy.getRotationY()
-    const forward = new Vector3(Math.sin(angle), 0, Math.cos(angle)).normalize()
+    const forward = CollisionSystem._tmpForward
+    forward.set(Math.sin(angle), 0, Math.cos(angle)).normalize()
 
-    const toPlayer = playerPos.subtract(enemyPos).normalize()
+    const toPlayer = CollisionSystem._tmpToPlayer
+    playerPos.subtractToRef(enemyPos, toPlayer)
+    toPlayer.normalize()
     const dot = Vector3.Dot(forward, toPlayer)
     // 增加检测角度从25°到40°，让Boss更容易发现侧面的玩家
     const halfAngle = 40 * Math.PI / 180

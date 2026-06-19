@@ -11,6 +11,8 @@ import type { PropType } from '../types/game'
 import { PROP_CONFIGS, WEAPON_CONFIGS } from '../types/game'
 import { createWeaponPickupMesh } from './weapons/WeaponModels'
 
+const ALL_CONFIGS = [...PROP_CONFIGS, ...WEAPON_CONFIGS]
+
 export interface PropItem {
   id: string
   type: PropType
@@ -27,6 +29,7 @@ export class Props {
   private spawnInterval: number = 10
   private spawnTimer: number = 0
   private maxProps: number = 3
+  private _animTime: number = 0
 
   constructor(scene: Scene) {
     this.scene = scene
@@ -34,6 +37,7 @@ export class Props {
 
   update(delta: number, playerPosition: Vector3): PropItem | null {
     this.spawnTimer += delta
+    this._animTime += delta
     if (this.spawnTimer >= this.spawnInterval && this.props.length < this.maxProps) {
       this.spawnProp()
       this.spawnTimer = 0
@@ -47,12 +51,11 @@ export class Props {
   }
 
   private spawnProp(): void {
-    const allConfigs = [...PROP_CONFIGS, ...WEAPON_CONFIGS]
     const random = Math.random()
     let cumulative = 0
-    let selectedConfig = allConfigs[0]
+    let selectedConfig = ALL_CONFIGS[0]
 
-    for (const config of allConfigs) {
+    for (const config of ALL_CONFIGS) {
       cumulative += config.spawnChance
       if (random <= cumulative) {
         selectedConfig = config
@@ -133,7 +136,7 @@ export class Props {
 
   private animateProp(prop: PropItem, delta: number): void {
     prop.mesh.rotation.y += delta * 2
-    prop.mesh.position.y = 0.5 + Math.sin(Date.now() * 0.003) * 0.2
+    prop.mesh.position.y = 0.5 + Math.sin(this._animTime * 3) * 0.2
   }
 
   private checkPickup(playerPosition: Vector3): PropItem | null {

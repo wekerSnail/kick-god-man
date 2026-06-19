@@ -84,7 +84,11 @@ export class HidingSpots {
     prop.position = new Vector3(-centerX * scale, -minY * scale, -centerZ * scale)
     childMeshes.forEach(m => {
       m.receiveShadows = true
-      this.shadowGen.addShadowCaster(m)
+      if (targetHeight >= 0.4) {
+        this.shadowGen.addShadowCaster(m)
+      }
+      m.freezeWorldMatrix()
+      if (m.material) (m.material as PBRMaterial).freeze()
     })
     return true
   }
@@ -127,6 +131,8 @@ export class HidingSpots {
     const potMat = new PBRMaterial('potMat', this.scene)
     potMat.albedoColor = Color3.FromHexString('#CD853F')
     pot.material = potMat
+    pot.freezeWorldMatrix()
+    potMat.freeze()
 
     const trunk = MeshBuilder.CreateCylinder('trunk', {
       diameter: 0.16,
@@ -138,9 +144,12 @@ export class HidingSpots {
     const trunkMat = new PBRMaterial('trunkMat', this.scene)
     trunkMat.albedoColor = Color3.FromHexString('#A0724A')
     trunk.material = trunkMat
+    trunk.freezeWorldMatrix()
+    trunkMat.freeze()
 
     const leafMat = new PBRMaterial('leafMat', this.scene)
     leafMat.albedoColor = Color3.FromHexString('#66BB6A')
+    leafMat.freeze()
     const leafPositions = [
       new Vector3(0, 1.8, 0),
       new Vector3(0.3, 1.6, 0.2),
@@ -156,6 +165,7 @@ export class HidingSpots {
       leaf.position = pos
       leaf.parent = parent
       leaf.material = leafMat
+      leaf.freezeWorldMatrix()
     })
   }
 
@@ -172,6 +182,8 @@ export class HidingSpots {
     body.parent = parent
     body.material = mat
     body.receiveShadows = true
+    body.freezeWorldMatrix()
+    mat.freeze()
   }
 
   private fallbackSofa(parent: TransformNode): void {
@@ -186,6 +198,7 @@ export class HidingSpots {
     seat.position.y = 0.4
     seat.parent = parent
     seat.material = mat
+    seat.freezeWorldMatrix()
     const back = MeshBuilder.CreateBox('sofaBack', {
       width: 3,
       height: 0.8,
@@ -194,6 +207,8 @@ export class HidingSpots {
     back.position = new Vector3(0, 1.0, -0.45)
     back.parent = parent
     back.material = mat
+    back.freezeWorldMatrix()
+    mat.freeze()
   }
 
   isInHidingSpot(playerPosition: Vector3): boolean {

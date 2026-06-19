@@ -57,6 +57,8 @@ export class OfficeLevel {
     mat.metallic = 0.0
     ground.material = mat
     ground.receiveShadows = true
+    ground.freezeWorldMatrix()
+    mat.freeze()
     this.groundMats.push(mat)
   }
 
@@ -77,6 +79,7 @@ export class OfficeLevel {
     backWall.position = new Vector3(0, WALL_HEIGHT / 2, -half)
     backWall.material = wallMat
     backWall.receiveShadows = true
+    backWall.freezeWorldMatrix()
 
     // 右侧墙（+X 方向）
     const rightWall = MeshBuilder.CreateBox('rightWall', {
@@ -87,6 +90,8 @@ export class OfficeLevel {
     rightWall.position = new Vector3(half, WALL_HEIGHT / 2, 0)
     rightWall.material = wallMat
     rightWall.receiveShadows = true
+    rightWall.freezeWorldMatrix()
+    wallMat.freeze()
 
     // 踢脚线
     const baseboardMat = new PBRMaterial('baseboardMat', this.scene)
@@ -100,6 +105,7 @@ export class OfficeLevel {
     }, this.scene)
     baseboardBack.position = new Vector3(0, 0.15, -half + 0.1)
     baseboardBack.material = baseboardMat
+    baseboardBack.freezeWorldMatrix()
 
     const baseboardRight = MeshBuilder.CreateBox('baseboardRight', {
       width: 0.05,
@@ -108,6 +114,8 @@ export class OfficeLevel {
     }, this.scene)
     baseboardRight.position = new Vector3(half - 0.1, 0.15, 0)
     baseboardRight.material = baseboardMat
+    baseboardRight.freezeWorldMatrix()
+    baseboardMat.freeze()
   }
 
   private placeProp(
@@ -152,6 +160,8 @@ export class OfficeLevel {
       if (targetHeight >= 0.4) {
         this.shadowGen.addShadowCaster(m)
       }
+      m.freezeWorldMatrix()
+      if (m.material) (m.material as PBRMaterial).freeze()
     })
     return true
   }
@@ -220,6 +230,8 @@ export class OfficeLevel {
       rugMat.albedoColor = Color3.FromHexString('#A8C8E8')
       rugMat.roughness = 1.0
       rugMesh.material = rugMat
+      rugMesh.freezeWorldMatrix()
+      rugMat.freeze()
     }
   }
 
@@ -240,6 +252,8 @@ export class OfficeLevel {
     frame.material = frameMat
     frame.receiveShadows = true
     this.shadowGen.addShadowCaster(frame)
+    frame.freezeWorldMatrix()
+    frameMat.freeze()
 
     // 床垫
     const mattressMat = new PBRMaterial('mattressMat', this.scene)
@@ -252,6 +266,8 @@ export class OfficeLevel {
     mattress.position = new Vector3(-6, 0.52, -7)
     mattress.parent = bedParent
     mattress.material = mattressMat
+    mattress.freezeWorldMatrix()
+    mattressMat.freeze()
 
     // 红格子床单
     const blanketMat = new PBRMaterial('blanketMat', this.scene)
@@ -264,6 +280,8 @@ export class OfficeLevel {
     blanket.position = new Vector3(-6, 0.68, -7.3)
     blanket.parent = bedParent
     blanket.material = blanketMat
+    blanket.freezeWorldMatrix()
+    blanketMat.freeze()
 
     // 枕头
     const pillowMat = new PBRMaterial('pillowMat', this.scene)
@@ -276,6 +294,8 @@ export class OfficeLevel {
     pillow.position = new Vector3(-6, 0.72, -5.9)
     pillow.parent = bedParent
     pillow.material = pillowMat
+    pillow.freezeWorldMatrix()
+    pillowMat.freeze()
 
     // 床头板
     const headboard = MeshBuilder.CreateBox('headboard', {
@@ -284,6 +304,7 @@ export class OfficeLevel {
     headboard.position = new Vector3(-6, 0.9, -5.6)
     headboard.parent = bedParent
     headboard.material = frameMat
+    headboard.freezeWorldMatrix()
   }
 
   private createSofa(): void {
@@ -343,6 +364,11 @@ export class OfficeLevel {
       cushion.parent = sofaParent
       cushion.material = cushionMat
     }
+
+    sofaMat.freeze()
+    armMat.freeze()
+    cushionMat.freeze()
+    sofaParent.getChildMeshes().forEach(m => m.freezeWorldMatrix())
   }
 
   private createWindow(): void {
@@ -360,6 +386,8 @@ export class OfficeLevel {
     frame.position = new Vector3(5, 3.0, -9.85)
     frame.parent = winParent
     frame.material = frameMat
+    frame.freezeWorldMatrix()
+    frameMat.freeze()
 
     // 玻璃（半透明蓝）
     const glassMat = new PBRMaterial('glassMat', this.scene)
@@ -373,6 +401,7 @@ export class OfficeLevel {
     glass.position = new Vector3(5, 3.0, -9.8)
     glass.parent = winParent
     glass.material = glassMat
+    glass.freezeWorldMatrix()
 
     // 百叶窗条纹
     const blindMat = new PBRMaterial('blindMat', this.scene)
@@ -387,7 +416,9 @@ export class OfficeLevel {
       slat.parent = winParent
       slat.material = blindMat
       slat.rotation.x = 0.3
+      slat.freezeWorldMatrix()
     }
+    blindMat.freeze()
   }
 
   private createShelf(): void {
@@ -397,18 +428,21 @@ export class OfficeLevel {
     const shelfMat = new PBRMaterial('shelfMat', this.scene)
     shelfMat.albedoColor = Color3.FromHexString('#C4A06A')
     shelfMat.roughness = 0.7
+    shelfMat.freeze()
 
     // 书色材质提到循环外复用，每种颜色只创建一次（P3.3）
     const bookColors = ['#E74C3C', '#3498DB', '#2ECC71', '#9B59B6', '#F39C12']
     const bookMats = bookColors.map((c, i) => {
       const m = new PBRMaterial(`bookMat_${i}`, this.scene)
       m.albedoColor = Color3.FromHexString(c)
+      m.freeze()
       return m
     })
 
     // 搁板支架材质只创建一次（P3.3）
     const bracketMat = new PBRMaterial('bracketMat', this.scene)
     bracketMat.albedoColor = Color3.FromHexString('#333333')
+    bracketMat.freeze()
 
     // 两层搁板
     for (let row = 0; row < 2; row++) {
@@ -418,6 +452,7 @@ export class OfficeLevel {
       shelf.position = new Vector3(-7, 2.5 + row * 1.2, -9.75)
       shelf.parent = shelfParent
       shelf.material = shelfMat
+      shelf.freezeWorldMatrix()
 
       for (let b = 0; b < 4; b++) {
         const book = MeshBuilder.CreateBox(`book_${row}_${b}`, {
@@ -426,6 +461,7 @@ export class OfficeLevel {
         book.position = new Vector3(-7.5 + b * 0.35, 2.68 + row * 1.2 + 0.15, -9.75)
         book.parent = shelfParent
         book.material = bookMats[b % bookMats.length]
+        book.freezeWorldMatrix()
       }
 
       for (let side = 0; side < 2; side++) {
@@ -435,6 +471,7 @@ export class OfficeLevel {
         bracket.position = new Vector3(-7.7 + side * 1.6, 2.35 + row * 1.2, -9.75)
         bracket.parent = shelfParent
         bracket.material = bracketMat
+        bracket.freezeWorldMatrix()
       }
     }
   }
@@ -462,6 +499,8 @@ export class OfficeLevel {
       pot.position = new Vector3(pos.x, 0.2, pos.z)
       pot.parent = plantParent
       pot.material = potMat
+      pot.freezeWorldMatrix()
+      potMat.freeze()
 
       const leafMat = new PBRMaterial('leafMat_' + pos.x, this.scene)
       leafMat.albedoColor = Color3.FromHexString('#27AE60')
@@ -473,6 +512,8 @@ export class OfficeLevel {
       leaves.position = new Vector3(pos.x, 0.7, pos.z)
       leaves.parent = plantParent
       leaves.material = leafMat
+      leaves.freezeWorldMatrix()
+      leafMat.freeze()
     }
   }
 
@@ -492,6 +533,7 @@ export class OfficeLevel {
     top.material = deskMat
     top.receiveShadows = true
     this.shadowGen.addShadowCaster(top)
+    top.freezeWorldMatrix()
 
     const legPos = [
       new Vector3(pos.x - 1.1, 0.6, pos.z - 0.6),
@@ -507,7 +549,9 @@ export class OfficeLevel {
       leg.parent = parent
       leg.material = deskMat
       this.shadowGen.addShadowCaster(leg)
+      leg.freezeWorldMatrix()
     })
+    deskMat.freeze()
   }
 
   private fallbackChair(parent: TransformNode, pos: Vector3): void {
@@ -520,12 +564,15 @@ export class OfficeLevel {
     seat.position = new Vector3(pos.x, 0.55, pos.z)
     seat.parent = parent
     seat.material = mat
+    seat.freezeWorldMatrix()
     const back = MeshBuilder.CreateBox('fallbackChairBack', {
       width: 0.55, height: 0.6, depth: 0.06
     }, this.scene)
     back.position = new Vector3(pos.x, 0.88, pos.z - 0.25)
     back.parent = parent
     back.material = mat
+    back.freezeWorldMatrix()
+    mat.freeze()
   }
 
   private fallbackScreen(parent: TransformNode, pos: Vector3): void {
@@ -539,6 +586,8 @@ export class OfficeLevel {
     screen.position = new Vector3(pos.x, 1.75, pos.z)
     screen.parent = parent
     screen.material = frame
+    screen.freezeWorldMatrix()
+    frame.freeze()
     const panel = MeshBuilder.CreatePlane('fallbackScreenPanel', {
       width: 0.8, height: 0.45
     }, this.scene)
@@ -549,6 +598,8 @@ export class OfficeLevel {
     panelMat.emissiveColor = Color3.FromHexString('#2E86DE')
     panelMat.roughness = 0.2
     panel.material = panelMat
+    panel.freezeWorldMatrix()
+    panelMat.freeze()
   }
 
   private fallbackKeyboard(parent: TransformNode, pos: Vector3): void {
@@ -561,6 +612,8 @@ export class OfficeLevel {
     kb.position = new Vector3(pos.x, 1.25, pos.z)
     kb.parent = parent
     kb.material = mat
+    kb.freezeWorldMatrix()
+    mat.freeze()
   }
 
   private fallbackBookcase(parent: TransformNode, pos: Vector3): void {
@@ -575,6 +628,8 @@ export class OfficeLevel {
     body.material = mat
     body.receiveShadows = true
     this.shadowGen.addShadowCaster(body)
+    body.freezeWorldMatrix()
+    mat.freeze()
   }
 
   getFurniture(): TransformNode {

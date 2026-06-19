@@ -93,6 +93,7 @@ export class EasterEggBoss {
     this._stunTimer = STUN_DURATION
     this._isShaking = false
     this._showRandomDialogue()
+    this._enemy.playAnimation('Idle')
   }
 
   /**
@@ -161,6 +162,8 @@ export class EasterEggBoss {
     } else {
       this._enemy.setRotationY(-Math.PI * 0.5) // 面向左
     }
+
+    this._enemy.playAnimation('Walk')
   }
 
   /**

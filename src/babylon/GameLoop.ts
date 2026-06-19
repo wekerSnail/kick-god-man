@@ -401,8 +401,7 @@ export class GameLoop {
 
     const pickedUp = this.props.update(delta, this.player.getPosition())
     if (pickedUp) {
-      const allConfigs = [...WEAPON_CONFIGS]
-      const config = allConfigs.find(c => c.type === pickedUp.type)
+      const config = WEAPON_CONFIGS.find(c => c.type === pickedUp.type)
       this.inventory.push({
         id: pickedUp.id,
         type: pickedUp.type,

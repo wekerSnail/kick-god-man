@@ -34,7 +34,7 @@ export class EngineContext {
     this.engine = new Engine(canvas, true, {
       antialias: true,
       powerPreference: 'high-performance',
-      preserveDrawingBuffer: true,
+      preserveDrawingBuffer: false,
       stencil: true
     }, true)
     this.engine.setHardwareScalingLevel(1 / Math.min(window.devicePixelRatio, 2))
@@ -54,7 +54,7 @@ export class EngineContext {
     this.camera.setTarget(Vector3.Zero())
     this.camera.fov = (50 * Math.PI) / 180
     this.camera.minZ = 0.1
-    this.camera.maxZ = 1000
+    this.camera.maxZ = 100
 
     this.setupLighting()
     this.shadowGen = this.setupShadow()
@@ -84,7 +84,9 @@ export class EngineContext {
   }
 
   private setupShadow(): ShadowGenerator {
-    const shadowGen = new ShadowGenerator(2048, this.sun)
+    const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 768
+    const shadowSize = isMobile ? 1024 : 2048
+    const shadowGen = new ShadowGenerator(shadowSize, this.sun)
     shadowGen.usePercentageCloserFiltering = true
     shadowGen.bias = 0.01
     shadowGen.normalBias = 0.02
@@ -103,7 +105,7 @@ export class EngineContext {
     p.imageProcessing.contrast = 1.0
     // 关闭暗角和颗粒（夜间效果）
     p.imageProcessing.vignetteEnabled = false
-    p.fxaaEnabled = true
+    p.fxaaEnabled = false
     p.grainEnabled = false
     return p
   }
