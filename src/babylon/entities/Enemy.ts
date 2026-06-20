@@ -43,6 +43,8 @@ export class Enemy {
 
   private phoneLight: PointLight | null = null
   private stunIndicator: TransformNode | null = null
+  private stunSpriteManager: SpriteManager | null = null
+  private stunSprites: Sprite[] = []
   private meetingIndicator: TransformNode | null = null
   private patrolWarningSprite: Sprite | null = null
   private patrolTextSprite: Sprite | null = null
@@ -358,9 +360,45 @@ export class Enemy {
       this.stunIndicator = new TransformNode('stunIndicator', this.scene)
       this.stunIndicator.parent = this.mesh
       this.stunIndicator.position.y = 2.5
+
+      // 创建眩晕星星纹理
+      if (!this.stunSpriteManager) {
+        const tex = new DynamicTexture('stunStarTex', { width: 128, height: 128 }, this.scene, false)
+        const ctx = tex.getContext() as any
+        ctx.fillStyle = '#FFD700'
+        ctx.font = 'bold 90px Arial'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText('⭐', 64, 64)
+        tex.update()
+
+        this.stunSpriteManager = new SpriteManager('stunStarMgr', '', 3, 128, this.scene)
+        this.stunSpriteManager.texture = tex
+      }
+
+      // 创建 3 颗旋转星星
+      this.stunSprites = []
+      for (let i = 0; i < 3; i++) {
+        const star = new Sprite(`stunStar_${i}`, this.stunSpriteManager)
+        star.width = 0.5
+        star.height = 0.5
+        star.invertV = true
+        this.stunSprites.push(star)
+      }
     }
+
     if (this.stunIndicator) {
       this.stunIndicator.setEnabled(show)
+    }
+
+    // 显示/隐藏星星
+    for (const star of this.stunSprites) {
+      star.isVisible = show
+    }
+
+    // 眩晕结束时重置身体摇晃
+    if (!show) {
+      this.mesh.rotation.z = 0
     }
   }
 
@@ -369,6 +407,21 @@ export class Enemy {
       this.stunIndicator.rotation.y += 0.1
       this.stunIndicator.position.y = 2.5 + Math.sin(timer * 3) * 0.1
     }
+
+    // 更新星星位置：围绕头部旋转
+    const time = Date.now() * 0.003
+    for (let i = 0; i < this.stunSprites.length; i++) {
+      const angle = time + (i * Math.PI * 2) / this.stunSprites.length
+      const radius = 0.8
+      this.stunSprites[i].position = new Vector3(
+        this.position.x + Math.cos(angle) * radius,
+        this.position.y + 2.8 + Math.sin(time * 2 + i) * 0.15,
+        this.position.z + Math.sin(angle) * radius
+      )
+    }
+
+    // 身体摇晃效果
+    this.mesh.rotation.z = Math.sin(timer * 6) * 0.08
   }
 
   showMeetingIndicator(show: boolean): void {
