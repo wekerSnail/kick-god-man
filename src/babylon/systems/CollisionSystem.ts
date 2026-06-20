@@ -31,6 +31,8 @@ export class CollisionSystem {
 
     if (!this.enemy.isLookingBack()) return false
 
+    if (this.player.isInvisible()) return false
+
     const isHidden = this.hidingSpots.isInHidingSpot(this.player.getPosition())
     const hasPot = this.player.getPotActive()
 

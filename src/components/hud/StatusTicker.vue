@@ -25,6 +25,9 @@
     <div v-if="invisibleActive" class="ticker__block">
       <span class="ticker__val val--steel">👻 隐身中</span>
     </div>
+    <div v-if="speedActive" class="ticker__block">
+      <span class="ticker__val val--speed">👟 加速中</span>
+    </div>
   </div>
 </template>
 
@@ -39,6 +42,7 @@ const props = defineProps<{
   enemyState: string
   isHidden: boolean
   invisibleActive: boolean
+  speedActive: boolean
 }>()
 
 const potText = computed(() => {
@@ -141,6 +145,12 @@ const threatLevel = computed(() => {
 .val--combo { color: var(--amber); animation: combo-shake 0.3s var(--ease-office) infinite; }
 .val--moss { color: var(--moss); }
 .val--steel { color: var(--steel); }
+.val--speed { color: var(--moss); animation: speed-pulse 0.6s ease infinite; }
+
+@keyframes speed-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
 
 @keyframes warn-blink { 50% { opacity: 0.4; } }
 @keyframes danger-blink { 50% { opacity: 0.3; } }

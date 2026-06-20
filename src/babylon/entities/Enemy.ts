@@ -12,7 +12,7 @@ import {
 } from '@babylonjs/core'
 import type { AssetManager } from '../core/AssetManager'
 import { StateMachine } from '../core/StateMachine'
-import { NormalState, AttackedState } from '../state/EnemyStates'
+import { NormalState, AttackedState, DistractedState } from '../state/EnemyStates'
 import type { CollisionSystem } from '../systems/CollisionSystem'
 
 const characterModelUrl = new URL('/models/characters/boss.glb', import.meta.url).href
@@ -561,6 +561,38 @@ export class Enemy {
     this._playerDetectedDuringAttack = false
     this._playerUsingKeyboardDuringAttack = playerIsUsingKeyboard
     this.stateMachine.forceState(new AttackedState(), playerPosition)
+  }
+
+  distract(noisePosition: Vector3): void {
+    if (this.stateMachine.stateName === 'normal') {
+      this.stateMachine.forceState(new DistractedState(noisePosition))
+    }
+  }
+
+  moveToPosition(target: Vector3, speed: number, dt: number): boolean {
+    const dir = target.subtract(this.position)
+    const dist = dir.length()
+    if (dist < 0.5) return true
+
+    dir.normalize()
+    const newX = this.position.x + dir.x * speed * dt
+    const newZ = this.position.z + dir.z * speed * dt
+    const clampedX = Math.max(-9, Math.min(9, newX))
+    const clampedZ = Math.max(-9, Math.min(9, newZ))
+
+    if (this.collisionSystem) {
+      const result = this.collisionSystem.slideMove(this.position.x, this.position.z, clampedX, clampedZ, 0.4)
+      this.position.x = result.x
+      this.position.z = result.z
+    } else {
+      this.position.x = clampedX
+      this.position.z = clampedZ
+    }
+
+    this.mesh.position.copyFrom(this.position)
+    this.mesh.rotation.y = Math.atan2(dir.x, dir.z)
+    this.isWalking = true
+    return false
   }
 
   setPlayerDetected(detected: boolean): void {

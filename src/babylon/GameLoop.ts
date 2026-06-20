@@ -340,8 +340,9 @@ export class GameLoop {
     if (this.enemy.isLookingBack()) {
       const isHidden = this.hidingSpots.isInHidingSpot(this.player.getPosition())
       const hasPot = this.player.getPotActive()
+      const isInvisible = this.player.isInvisible()
 
-      if (!isHidden && !hasPot && this.detectionCooldown <= 0) {
+      if (!isHidden && !hasPot && !isInvisible && this.detectionCooldown <= 0) {
         const dist = Vector3.Distance(this.player.getPosition(), this.enemy.getPosition())
         if (dist < 6) {
           this.enemy.setLookBackDetected(true)
@@ -517,6 +518,7 @@ export class GameLoop {
     const discreteIsCharging = this.player.isCharging()
     const discreteCombo = this.player.isComboActive()
     const discreteInvisible = this.player.isInvisible()
+    const discreteSpeed = this.player.isSpeedActive()
     const discretePatrol = this.enemy.isPatrolling()
     const discreteInventoryLen = this.inventory.length
 
@@ -537,6 +539,7 @@ export class GameLoop {
       prev['isCharging'] !== discreteIsCharging ||
       prev['combo'] !== discreteCombo ||
       prev['invisible'] !== discreteInvisible ||
+      prev['speed'] !== discreteSpeed ||
       prev['patrol'] !== discretePatrol ||
       prev['inventoryLen'] !== discreteInventoryLen
 
@@ -564,6 +567,7 @@ export class GameLoop {
     prev['isCharging'] = discreteIsCharging
     prev['combo'] = discreteCombo
     prev['invisible'] = discreteInvisible
+    prev['speed'] = discreteSpeed
     prev['patrol'] = discretePatrol
     prev['inventoryLen'] = discreteInventoryLen
 
@@ -588,6 +592,7 @@ export class GameLoop {
       attackCooldown: this.player.getAttackCooldown(),
       comboActive: this.player.isComboActive(),
       invisibleActive: this.player.isInvisible(),
+      speedActive: this.player.isSpeedActive(),
       isPatrolWarning: this.enemy.isPatrolling(),
       isEasterEgg: this.isEasterEgg,
       easterEggTimeRemaining: this.easterEggMode?.timeRemaining ?? 0,
@@ -605,6 +610,9 @@ export class GameLoop {
           }
           if (item.type === 'invisible') {
             this.player.setInvisible(false)
+          }
+          if (item.type === 'speed') {
+            this.player.setSpeedActive(false)
           }
           return false
         }
@@ -642,6 +650,12 @@ export class GameLoop {
         }
         if (prop.type === 'invisible') {
           this.player.setInvisible(true)
+        }
+        if (prop.type === 'speed') {
+          this.player.setSpeedActive(true)
+        }
+        if (prop.type === 'noise') {
+          this.enemy.distract(this.player.getPosition())
         }
       }
     }

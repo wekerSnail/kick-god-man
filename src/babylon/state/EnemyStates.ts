@@ -2,6 +2,79 @@ import type { IState } from "../core/StateMachine";
 import type { Enemy } from "../entities/Enemy";
 import { Vector3 } from "@babylonjs/core";
 
+export class DistractedState implements IState<Enemy> {
+  readonly name = "distracted"
+  private timer: number = 0
+  private phase: 'react' | 'walk' | 'look' | 'return' = 'react'
+
+  private readonly REACT_DURATION = 0.8
+  private readonly WALK_DURATION = 2.0
+  private readonly LOOK_DURATION = 1.5
+  private readonly RETURN_SPEED = 3.0
+
+  constructor(private noisePosition: Vector3) {}
+
+  enter(ctx: Enemy): void {
+    this.timer = 0
+    this.phase = 'react'
+    ctx.showDialogue('什么声音？', 1.5)
+    ctx.showExclamation(true)
+    ctx.playAnimation('Idle')
+  }
+
+  update(ctx: Enemy, dt: number): IState<Enemy> | null {
+    this.timer += dt
+
+    switch (this.phase) {
+      case 'react':
+        if (this.timer >= this.REACT_DURATION) {
+          this.phase = 'walk'
+          this.timer = 0
+          ctx.showExclamation(false)
+        }
+        break
+
+      case 'walk':
+        ctx.moveToPosition(this.noisePosition, 3.0, dt)
+        if (this.timer >= this.WALK_DURATION) {
+          this.phase = 'look'
+          this.timer = 0
+          ctx.playAnimation('Idle')
+          ctx.showDialogue('...？', 1.5)
+        }
+        break
+
+      case 'look':
+        if (this.timer < this.LOOK_DURATION) {
+          const baseAngle = ctx.getRotationY()
+          const sway = Math.sin(this.timer * 4) * 0.5
+          ctx.rotateTowards(baseAngle + sway, 2, dt)
+        }
+        if (this.timer >= this.LOOK_DURATION) {
+          this.phase = 'return'
+          this.timer = 0
+        }
+        break
+
+      case 'return':
+        const reached = ctx.returnToStart(dt, this.RETURN_SPEED)
+        if (reached) {
+          return new NormalState()
+        }
+        if (this.timer > 10) {
+          return new NormalState()
+        }
+        break
+    }
+    return null
+  }
+
+  exit(ctx: Enemy): void {
+    ctx.showExclamation(false)
+    ctx.resetWalking()
+  }
+}
+
 export class NormalState implements IState<Enemy> {
   readonly name = "normal";
 

@@ -32,6 +32,8 @@ export class Player {
   private potStartTime: number = 0
   private comboActive: boolean = false
   private invisibleActive: boolean = false
+  private speedActive: boolean = false
+  private speedMultiplier: number = 1
   private invisibleStartTime: number = 0
   private invisibleDuration: number = 5
   private input: InputManager
@@ -574,8 +576,9 @@ export class Player {
 
     if (this.isMoving) {
       this._moveDir.normalize()
-      const newX = this.position.x + this._moveDir.x * this.speed * delta
-      const newZ = this.position.z + this._moveDir.z * this.speed * delta
+      const effectiveSpeed = this.speed * this.speedMultiplier
+      const newX = this.position.x + this._moveDir.x * effectiveSpeed * delta
+      const newZ = this.position.z + this._moveDir.z * effectiveSpeed * delta
       const clampedX = Math.max(-9, Math.min(9, newX))
       const clampedZ = Math.max(-9, Math.min(9, newZ))
 
@@ -718,6 +721,15 @@ export class Player {
     return this.comboActive
   }
 
+  setSpeedActive(active: boolean): void {
+    this.speedActive = active
+    this.speedMultiplier = active ? 2 : 1
+  }
+
+  isSpeedActive(): boolean {
+    return this.speedActive
+  }
+
   setInvisible(active: boolean): void {
     this.invisibleActive = active
     if (active) {
@@ -744,6 +756,8 @@ export class Player {
     this.comboActive = false
     this.invisibleActive = false
     this.invisibleStartTime = 0
+    this.speedActive = false
+    this.speedMultiplier = 1
     this.isSwingingWeapon = false
     this.swingTime = 0
     this.swingCooldown = 0

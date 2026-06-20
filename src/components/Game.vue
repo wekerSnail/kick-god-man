@@ -40,6 +40,7 @@
       :enemy-state="gameState.enemyState"
       :is-hidden="gameState.isHidden"
       :invisible-active="gameState.invisibleActive"
+      :speed-active="gameState.speedActive"
     />
 
     <!-- 彩蛋模式武器栏 -->
@@ -108,6 +109,7 @@ const DEFAULT_STATE = () => ({
   attackCooldown: 0,
   comboActive: false,
   invisibleActive: false,
+  speedActive: false,
   isPatrolWarning: false,
   isEasterEgg: false,
   easterEggTimeRemaining: 0,
